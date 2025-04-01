@@ -1,0 +1,253 @@
+# MIMIC Clinical Feature Mappings Configuration
+
+# Lab test mappings
+lab_tests:
+  # Common lab tests to include in feature extraction
+  common_labs:
+    - "Glucose"
+    - "Potassium"
+    - "Sodium"
+    - "Chloride"
+    - "Creatinine"
+    - "BUN"
+    - "Bicarbonate"
+    - "Anion Gap"
+    - "Hemoglobin"
+    - "Hematocrit"
+    - "WBC"
+    - "Platelet Count"
+    - "Magnesium"
+    - "Calcium"
+    - "Phosphate"
+    - "Lactate"
+    - "pH"
+    - "pO2"
+    - "pCO2"
+    - "Base Excess"
+    - "Albumin"
+    - "ALT"
+    - "AST"
+    - "Alkaline Phosphatase"
+    - "Bilirubin"
+    - "Troponin"
+  
+  # Mapping of standardized lab names to their variations in the dataset
+  lab_name_variations:
+    Glucose:
+      - "Glucose"
+      - "Glucose, CSF"
+      - "Glucose, Whole Blood"
+    Potassium:
+      - "Potassium"
+      - "Potassium, Whole Blood"
+    Sodium:
+      - "Sodium"
+      - "Sodium, Whole Blood"
+    Chloride:
+      - "Chloride"
+      - "Chloride, Whole Blood"
+    Creatinine:
+      - "Creatinine"
+    BUN:
+      - "BUN"
+      - "Urea Nitrogen"
+    Bicarbonate:
+      - "Bicarbonate"
+      - "HCO3"
+      - "Calculated Bicarbonate, Whole Blood"
+    "Anion Gap":
+      - "Anion Gap"
+    Hemoglobin:
+      - "Hemoglobin"
+      - "Hemoglobin, Whole Blood"
+    Hematocrit:
+      - "Hematocrit"
+      - "Hematocrit, Calculated"
+    WBC:
+      - "WBC"
+      - "White Blood Cells"
+    "Platelet Count":
+      - "Platelet Count"
+      - "Platelets"
+    Magnesium:
+      - "Magnesium"
+    Calcium:
+      - "Calcium"
+      - "Calcium, Total"
+    Phosphate:
+      - "Phosphate"
+      - "Phosphorus"
+    Lactate:
+      - "Lactate"
+      - "Lactate, Whole Blood"
+    pH:
+      - "pH"
+      - "pH, Whole Blood"
+    pO2:
+      - "pO2"
+      - "PO2, Whole Blood"
+    pCO2:
+      - "pCO2"
+      - "PCO2, Whole Blood"
+    "Base Excess":
+      - "Base Excess"
+      - "Base Excess, Whole Blood"
+    Albumin:
+      - "Albumin"
+    ALT:
+      - "ALT"
+      - "Alanine Aminotransferase"
+    AST:
+      - "AST"
+      - "Aspartate Aminotransferase"
+    "Alkaline Phosphatase":
+      - "Alkaline Phosphatase"
+    Bilirubin:
+      - "Bilirubin, Total"
+      - "Total Bilirubin"
+    Troponin:
+      - "Troponin I"
+      - "Troponin T"
+      - "Troponin"
+
+# Vital sign mappings
+vital_signs:
+  # Mapping of vital sign categories to their itemids in MIMIC
+  categories:
+    "Heart Rate":
+      - 211
+      - 220045
+    "Systolic BP":
+      - 51
+      - 442
+      - 455
+      - 6701
+      - 220179
+      - 220050
+    "Diastolic BP":
+      - 8368
+      - 8440
+      - 8441
+      - 8555
+      - 220180
+      - 220051
+    "Mean BP":
+      - 456
+      - 52
+      - 6702
+      - 443
+      - 220052
+      - 220181
+    "Respiratory Rate":
+      - 615
+      - 618
+      - 220210
+      - 224690
+    "Temperature":
+      - 223761
+      - 678
+      - 223762
+    "SpO2":
+      - 646
+      - 220277
+    "Glucose":
+      - 807
+      - 811
+      - 1529
+      - 3745
+      - 3744
+      - 225664
+      - 220621
+      - 226537
+    "GCS Total":
+      - 198
+      - 220739
+    "GCS Motor":
+      - 184
+      - 220734
+    "GCS Verbal":
+      - 723
+      - 223900
+    "GCS Eye":
+      - 454
+      - 223901
+
+# ICD-9 diagnosis code mappings
+icd9_categories:
+  # Mapping of ICD-9 code ranges to clinical categories
+  ranges:
+    "Infectious Diseases":
+      - [1, 139]
+    "Neoplasms":
+      - [140, 239]
+    "Endocrine/Metabolic":
+      - [240, 279]
+    "Hematologic":
+      - [280, 289]
+    "Mental Disorders":
+      - [290, 319]
+    "Neurologic":
+      - [320, 389]
+    "Cardiovascular":
+      - [390, 459]
+    "Respiratory":
+      - [460, 519]
+    "Gastrointestinal":
+      - [520, 579]
+    "Genitourinary":
+      - [580, 629]
+    "Pregnancy/Childbirth":
+      - [630, 679]
+    "Dermatologic":
+      - [680, 709]
+    "Musculoskeletal":
+      - [710, 739]
+    "Congenital Anomalies":
+      - [740, 759]
+    "Perinatal Conditions":
+      - [760, 779]
+    "Symptoms/Ill-Defined":
+      - [780, 799]
+    "Injury/Poisoning":
+      - [800, 999]
+    "External Causes":
+      - ["E000", "E999"]
+    "Supplementary":
+      - ["V01", "V91"]
+  
+  # Specific ICD-9 codes for common conditions
+  specific_codes:
+    "Sepsis":
+      - "038"
+      - "995.91"
+      - "995.92"
+    "Myocardial Infarction":
+      - "410"
+    "Heart Failure":
+      - "428"
+    "Pneumonia":
+      - "480"
+      - "481"
+      - "482"
+      - "483"
+      - "484"
+      - "485"
+      - "486"
+    "Stroke":
+      - "430"
+      - "431"
+      - "432"
+      - "433"
+      - "434"
+      - "436"
+    "Renal Failure":
+      - "584"
+      - "585"
+      - "586"
+    "COPD":
+      - "490"
+      - "491"
+      - "492"
+      - "496"
+    "Diabetes":
+      - "250"

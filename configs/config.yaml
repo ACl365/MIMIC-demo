@@ -1,0 +1,114 @@
+# MIMIC Critical Care Dataset Project Configuration
+
+# Logging configuration
+logging:
+  level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file_output: true
+  console_output: true
+
+# Data paths
+data:
+  raw:
+    mimic_iii: "raw/MIMIC_iii/mimic-iii-clinical-database-demo-1.4/"
+    mimic_iv: "raw/MIMIC_iv/"
+  processed:
+    base_path: "data/processed/"
+    patient_data: "data/processed/patient_data.csv"
+    admission_data: "data/processed/admission_data.csv"
+    icu_data: "data/processed/icu_data.csv"
+    lab_data: "data/processed/lab_data.csv"
+    chart_data: "data/processed/chart_data.csv"
+    diagnosis_data: "data/processed/diagnosis_data.csv"
+    medication_data: "data/processed/medication_data.csv"
+    procedure_data: "data/processed/procedure_data.csv"
+    combined_features: "data/processed/combined_features.csv"
+
+# Feature engineering parameters
+features:
+  demographic:
+    include: true
+    age_bins: [0, 18, 30, 50, 70, 100]
+  vitals:
+    include: true
+    window_hours: 24
+    aggregation_methods: ["mean", "min", "max", "std"]
+  lab_values:
+    include: true
+    window_hours: 48
+    aggregation_methods: ["mean", "min", "max", "std", "count"]
+    missing_threshold: 0.7
+  medications:
+    include: true
+    categories: ["antibiotics", "vasopressors", "sedatives", "analgesics", "antiarrhythmics"]
+  procedures:
+    include: true
+  diagnoses:
+    include: true
+    use_hierarchy: true
+  temporal:
+    include: true
+    windows: [6, 12, 24, 48, 72]
+
+# Model parameters
+models:
+  readmission:
+    target: "readmission_30day"
+    algorithms: ["logistic_regression", "random_forest", "xgboost", "lightgbm"]
+    cv_folds: 5
+    hyperparameter_tuning: true
+    class_weight: "balanced"
+  mortality:
+    target: "icu_mortality"
+    algorithms: ["logistic_regression", "random_forest", "xgboost", "lightgbm"]
+    cv_folds: 5
+    hyperparameter_tuning: true
+    class_weight: "balanced"
+  los:
+    target: "length_of_stay"
+    algorithms: ["linear_regression", "random_forest", "xgboost", "lightgbm"]
+    cv_folds: 5
+    hyperparameter_tuning: true
+    
+# Evaluation metrics
+evaluation:
+  classification:
+    metrics: ["accuracy", "precision", "recall", "f1", "roc_auc", "pr_auc"]
+    calibration: true
+    threshold_optimization: true
+  regression:
+    metrics: ["rmse", "mae", "r2", "explained_variance"]
+    
+# Interpretability
+interpretability:
+  shap:
+    enabled: true
+    max_display: 20
+  lime:
+    enabled: true
+    num_features: 10
+  feature_importance:
+    enabled: true
+    
+# Visualization
+visualization:
+  plots:
+    - "feature_importance"
+    - "shap_summary"
+    - "confusion_matrix"
+    - "roc_curve"
+    - "pr_curve"
+    - "calibration_curve"
+    - "learning_curve"
+  interactive: true
+  
+# API configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  
+# Dashboard configuration
+dashboard:
+  host: "0.0.0.0"
+  port: 8050
+  debug: false

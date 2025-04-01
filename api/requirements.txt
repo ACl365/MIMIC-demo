@@ -1,0 +1,21 @@
+# API Framework
+fastapi>=0.75.0
+uvicorn[standard]>=0.17.0 # Include standard dependencies like websockets, httptools
+pydantic>=1.9.0
+
+# Configuration
+pyyaml>=6.0
+
+# Data Handling & Preprocessing (adjust as needed by your model's preprocessing steps)
+pandas>=1.3.0
+numpy>=1.20.0
+scikit-learn>=1.0.0
+
+# Model Loading & Execution (adjust based on the actual model used)
+joblib>=1.1.0
+lightgbm>=3.3.0 # Example: if LightGBM is used. Change/add if using xgboost, catboost, etc.
+# xgboost>=1.5.0
+# catboost>=1.0.0
+
+# Add other specific dependencies required by your model or preprocessing logic below
+# e.g., polars, specific feature engineering libs if used during inference
