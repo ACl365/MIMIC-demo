@@ -75,19 +75,28 @@ with col2:
     selected_insurance = st.selectbox("Insurance", options=list(insurance_options.keys()), index=2) # Default to Medicare
     selected_marital_status = st.selectbox("Marital Status", options=list(marital_status_options.keys()), index=1) # Default to Married
 
-st.subheader("Diagnosis Categories (Select all that apply)")
-diagnosis_inputs = {}
-diag_cols = st.columns(4)
-col_idx = 0
-for i, feature in enumerate(diagnosis_features):
-    # Clean up label for display
-    label = feature.replace("diagnosis_", "").replace("_", " ").title()
-    if label == "E External Causes": label = "External Causes (E-codes)"
-    if label == "V Supplementary": label = "Supplementary (V-codes)"
+st.subheader("Diagnosis Categories")
+# Create user-friendly labels for multiselect
+diagnosis_labels = {
+    feature: feature.replace("diagnosis_", "").replace("_", " ").title()
+    for feature in diagnosis_features
+}
+# Special cases for labels
+diagnosis_labels["diagnosis_e_external_causes"] = "External Causes (E-codes)"
+diagnosis_labels["diagnosis_v_supplementary"] = "Supplementary (V-codes)"
 
-    with diag_cols[col_idx % 4]:
-        diagnosis_inputs[feature] = st.checkbox(label, value=(feature == "diagnosis_circulatory")) # Default Circulatory to True
-    col_idx += 1
+# Use multiselect for diagnosis categories
+selected_diagnoses_labels = st.multiselect(
+    "Select all applicable primary diagnosis categories:",
+    options=list(diagnosis_labels.values()),
+    default=["Circulatory"] # Default to Circulatory
+)
+
+# Map selected labels back to feature names
+selected_diagnosis_features = [
+    feature for feature, label in diagnosis_labels.items()
+    if label in selected_diagnoses_labels
+]
 
 # --- Prediction ---
 st.header("Prediction")
@@ -107,9 +116,7 @@ if st.button("Predict Readmission Risk"):
     # 3. Admission Type (One-hot encode based on selectbox selection)
     selected_admission_feature = admission_type_options[selected_admission_type]
     for feature_name in admission_type_options.values():
-        # Use the alias defined in Pydantic model for keys with spaces/dots
-        api_key = feature_name.replace(" ", "_").replace(".", "") # Match Pydantic field name
-        payload[api_key] = 1 if feature_name == selected_admission_feature else 0
+        payload[feature_name] = 1 if feature_name == selected_admission_feature else 0
 
     # 4. Insurance (One-hot encode based on selectbox selection)
     selected_insurance_feature = insurance_options[selected_insurance]
@@ -119,40 +126,21 @@ if st.button("Predict Readmission Risk"):
     # 5. Marital Status (One-hot encode based on selectbox selection)
     selected_marital_feature = marital_status_options[selected_marital_status]
     for feature_name in marital_status_options.values():
-         # Use the alias defined in Pydantic model for keys with spaces/parentheses
-        api_key = feature_name.replace(" ", "_").replace("(", "").replace(")", "") # Match Pydantic field name
-        payload[api_key] = 1 if feature_name == selected_marital_feature else 0
+        payload[feature_name] = 1 if feature_name == selected_marital_feature else 0
 
-    # 6. Diagnosis Features (from checkboxes)
-    for feature, checked in diagnosis_inputs.items():
-        payload[feature] = 1 if checked else 0
+    # 6. Diagnosis Features (from multiselect)
+    for feature in diagnosis_features:
+        payload[feature] = 1 if feature in selected_diagnosis_features else 0
 
     # 7. Feature '0' (Set to default 0 as it's not in the UI)
-    payload['0'] = 0 # Match the alias '0' used in Pydantic model
+    # 7. Feature '0' (Include if expected by model, default to 0)
+    # Assuming '0' is an expected feature based on previous API structure.
+    # The updated API will ignore it if it's not in the loaded feature list.
+    payload['0'] = 0
 
-    # Ensure all keys match the Pydantic model field names (handling aliases)
-    final_payload = {}
-    for key, value in payload.items():
-        # Remap keys that had aliases in Pydantic model back to the alias if needed for the API request
-        if key == "admission_type_ambulatory_observation": final_payload["admission_type_ambulatory observation"] = value
-        elif key == "admission_type_direct_emer": final_payload["admission_type_direct emer."] = value
-        elif key == "admission_type_direct_observation": final_payload["admission_type_direct observation"] = value
-        elif key == "admission_type_eu_observation": final_payload["admission_type_eu observation"] = value
-        elif key == "admission_type_ew_emer": final_payload["admission_type_ew emer."] = value
-        elif key == "admission_type_observation_admit": final_payload["admission_type_observation admit"] = value
-        elif key == "admission_type_surgical_same_day_admission": final_payload["admission_type_surgical same day admission"] = value
-        elif key == "marital_status_unknown_default": final_payload["marital_status_unknown (default)"] = value
-        elif key == "feature_0": final_payload["0"] = value # Use the alias '0'
-        else: final_payload[key] = value # Keep original key if no alias needed
-
-    # Convert potential numpy types to standard Python types for JSON serialization
-    for key, value in final_payload.items():
-        if isinstance(value, (int, float)):
-             final_payload[key] = value
-        elif value is None:
-             final_payload[key] = None
-        else: # Assume int for binary flags if not already int/float
-             final_payload[key] = int(value)
+    # The API now handles feature validation, imputation, and aliases.
+    # We just need to send the constructed payload dictionary.
+    final_payload = payload
 
     st.write("Sending data to API:", final_payload) # For debugging
 
