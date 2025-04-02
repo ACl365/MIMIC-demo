@@ -2,22 +2,13 @@
 Model modules for the MIMIC project.
 """
 
-from .model import (
-    BaseModel,
-    ReadmissionModel,
-    MortalityModel,
-    LengthOfStayModel,
-)
+from .model import BaseModel, LengthOfStayModel, MortalityModel, ReadmissionModel
+from .predict_model import load_model, predict, predict_all
 from .train_model import (
-    train_readmission_model,
-    train_mortality_model,
     train_los_model,
     train_models,
-)
-from .predict_model import (
-    load_model,
-    predict,
-    predict_all,
+    train_mortality_model,
+    train_readmission_model,
 )
 
 __all__ = [

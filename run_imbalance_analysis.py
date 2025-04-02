@@ -22,7 +22,6 @@ if project_root not in sys.path:
 from src.models.imbalance_analysis import analyze_imbalance_techniques
 from src.utils import get_logger
 
-
 logger = get_logger(__name__)
 
 
@@ -37,33 +36,33 @@ def main() -> None:
         "--output-dir",
         type=str,
         default=None,
-        help="Directory to save outputs (default: results/imbalance_analysis)"
+        help="Directory to save outputs (default: results/imbalance_analysis)",
     )
     parser.add_argument(
         "--cv-folds",
         type=int,
         default=5,
-        help="Number of cross-validation folds (default: 5)"
+        help="Number of cross-validation folds (default: 5)",
     )
     parser.add_argument(
         "--random-state",
         type=int,
         default=42,
-        help="Random state for reproducibility (default: 42)"
+        help="Random state for reproducibility (default: 42)",
     )
     args = parser.parse_args()
-    
+
     logger.info("Starting imbalance analysis for readmission model")
     logger.info(f"Cross-validation folds: {args.cv_folds}")
     logger.info(f"Random state: {args.random_state}")
-    
+
     # Run analysis
     results = analyze_imbalance_techniques(
         output_dir=args.output_dir,
         cv_folds=args.cv_folds,
-        random_state=args.random_state
+        random_state=args.random_state,
     )
-    
+
     logger.info("Imbalance analysis completed successfully")
     logger.info(f"Results saved to {args.output_dir or 'results/imbalance_analysis'}")
 

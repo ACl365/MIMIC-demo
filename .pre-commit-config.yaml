@@ -1,0 +1,36 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+-   repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+    -   id: black
+        args: [--line-length=88] # Or your preferred line length
+-   repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort (python)
+        args: ["--profile", "black"] # Ensure compatibility with black
+-   repo: https://github.com/pycqa/flake8
+    rev: 7.1.0
+    hooks:
+    -   id: flake8
+        # Optional: Add args for specific flake8 config/plugins if needed
+        # args: ["--config=setup.cfg"]
+        additional_dependencies: [flake8-bugbear] # Example plugin
+-   repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.0
+    hooks:
+    -   id: mypy
+        args: [--ignore-missing-imports, --strict] # Start with strict, adjust as needed
+        # Optional: Specify files/folders if needed
+        # files: ^src/
+        additional_dependencies: [types-PyYAML, types-requests, pandas-stubs] # Add stubs for libraries

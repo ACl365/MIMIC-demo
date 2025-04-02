@@ -26,12 +26,12 @@
 
 2. **Best Overall Technique**: SMOTE provided the best overall performance with the highest F1 score (0.373) and a good balance between precision and recall. It improved precision significantly compared to other techniques while maintaining reasonable recall.
 
-3. **Precision-Recall Trade-off**: 
+3. **Precision-Recall Trade-off**:
    - Class weights and random oversampling achieved high recall (>0.81) but at the cost of precision (<0.20)
    - SMOTE achieved better precision (0.25) with somewhat lower recall (0.73)
    - This trade-off is important to consider based on the specific clinical context - whether missing a readmission (false negative) is more costly than a false alarm (false positive)
 
-4. **SMOTE vs. Random Oversampling**: 
+4. **SMOTE vs. Random Oversampling**:
    - SMOTE improved precision by 28% compared to random oversampling
    - SMOTE had lower recall by 10.5%
    - SMOTE's F1 score was 18.2% higher

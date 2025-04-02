@@ -1,10 +1,12 @@
 import os
 import sys
+import time  # Added for latency
+from collections import deque  # Added for feature stats
 from typing import Any, Dict, List, Optional, Union
 
-import numpy as np  # Added for SHAP
+import numpy as np
 import pandas as pd
-import shap  # Added for SHAP
+import shap
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -29,6 +31,17 @@ model_instance: Optional[MimicBaseModel] = None
 expected_features: Optional[Union[List[str], Dict[str, List[str]]]] = None
 shap_background_data: Optional[pd.DataFrame] = None
 config = {}  # Initialize as empty dict
+
+# --- Monitoring Variables ---
+# Store recent values for key features (e.g., age) for summary stats
+# Store counts and maybe simple stats in memory for demo purposes
+MAX_RECENT_VALUES = 100  # Configurable: How many recent values to store
+request_stats = {
+    "total_requests": 0,
+    "recent_ages": deque(maxlen=MAX_RECENT_VALUES),
+    # Add other features to track here, e.g.:
+    # "recent_feature_x": deque(maxlen=MAX_RECENT_VALUES),
+}
 
 # --- FastAPI App ---
 app = FastAPI(
@@ -137,6 +150,7 @@ async def load_model_on_startup() -> None:
                     X_processed, _ = model_instance.preprocess(
                         full_data, for_prediction=True
                     )
+                    # Ensure columns match exactly, filling missing with 0
                     X_processed = X_processed.reindex(
                         columns=expected_features, fill_value=0
                     )
@@ -158,9 +172,7 @@ async def load_model_on_startup() -> None:
                 )
                 shap_background_data = None
         else:
-            logger.info(
-                "Skipping SHAP background data preparation for temporal model."
-            )
+            logger.info("Skipping SHAP background data preparation for temporal model.")
 
     except Exception as e:
         logger.critical(f"CRITICAL ERROR during API startup: {e}", exc_info=True)
@@ -248,6 +260,9 @@ async def predict_readmission(
     - **Query Parameter**: `explain=true` for LLM explanation (adds latency).
     - **Output**: JSON with probability and optional explanation.
     """
+    global request_stats  # Allow modification of global stats - Must be before assignment
+    start_time = time.time()
+
     # Re-check model load status
     scaler_ok = (
         hasattr(model_instance, "scaler") and model_instance.scaler is not None
@@ -270,12 +285,35 @@ async def predict_readmission(
     explanation_text: Optional[str] = None
 
     try:
-        # Validate Input
+        request_stats["total_requests"] += 1
+        logger.info(f"Received prediction request #{request_stats['total_requests']}")
+
+        # --- Basic Input Validation & Feature Logging ---
         if not isinstance(patient_data, dict):
             raise HTTPException(
                 status_code=400, detail="Invalid input: Expected JSON object."
             )
 
+        # Log summary stats for key features (e.g., age)
+        try:
+            age = patient_data.get("age")  # Assuming 'age' is a key feature
+            if isinstance(age, (int, float)):
+                request_stats["recent_ages"].append(float(age))
+
+            # Log stats periodically (e.g., every 10 requests)
+            if request_stats["total_requests"] % 10 == 0:
+                if request_stats["recent_ages"]:
+                    mean_age = np.mean(list(request_stats["recent_ages"]))
+                    median_age = np.median(list(request_stats["recent_ages"]))
+                    logger.info(
+                        f"Recent {len(request_stats['recent_ages'])} requests - Age Stats: Mean={mean_age:.2f}, Median={median_age:.2f}"
+                    )
+                # Log stats for other tracked features here
+
+        except Exception as stats_err:
+            logger.warning(f"Could not log feature stats: {stats_err}")
+
+        # --- Data Preparation ---
         input_df_raw = pd.DataFrame([patient_data])
 
         # Prepare features based on model type
@@ -285,17 +323,22 @@ async def predict_readmission(
             logger.debug("Using Temporal model predict (internal preprocessing).")
         else:
             logger.debug("Using standard model predict (manual preprocessing/scaling).")
+            # Ensure expected_features is a list for standard models here
+            if not isinstance(expected_features, list):
+                raise TypeError(
+                    f"Expected features for standard model should be a list, got {type(expected_features)}"
+                )
             standard_features = expected_features
             try:
-                if input_df_raw.empty and not standard_features:
-                    input_df = pd.DataFrame(columns=standard_features)
-                elif input_df_raw.empty:
+                # Handle empty input DataFrame correctly
+                if input_df_raw.empty:
                     input_df = pd.DataFrame(
-                        [[0] * len(standard_features)], columns=standard_features
-                    )
+                        columns=standard_features
+                    )  # Create empty DF with correct columns
                 else:
                     input_df = input_df_raw.reindex(
-                        columns=standard_features, fill_value=0
+                        columns=standard_features,
+                        fill_value=0,  # Use 0 or appropriate default
                     )
             except Exception as reindex_e:
                 logger.error(f"Reindexing error: {reindex_e}", exc_info=True)
@@ -303,9 +346,14 @@ async def predict_readmission(
 
             # Scale standard features
             try:
-                if not hasattr(model_instance, "scaler") or model_instance.scaler is None:
+                if (
+                    not hasattr(model_instance, "scaler")
+                    or model_instance.scaler is None
+                ):
                     raise ValueError("Standard scaler not found/fitted.")
-                scaled_features = model_instance.scaler.transform(input_df)
+                # Ensure input_df has the correct columns before scaling
+                input_df_for_scaling = input_df[standard_features]
+                scaled_features = model_instance.scaler.transform(input_df_for_scaling)
             except Exception as scale_e:
                 logger.error(f"Scaling error: {scale_e}", exc_info=True)
                 raise HTTPException(status_code=400, detail="Data scaling error.")
@@ -313,16 +361,46 @@ async def predict_readmission(
         # Make Prediction
         try:
             if model_instance.model_type == "temporal_readmission":
-                prediction_result = model_instance.predict(input_df)
-                if isinstance(prediction_result, np.ndarray) and prediction_result.size > 0:
+                prediction_result = model_instance.predict(
+                    input_df
+                )  # Pass raw input for temporal
+                if (
+                    isinstance(prediction_result, np.ndarray)
+                    and prediction_result.size > 0
+                ):
                     readmission_probability = prediction_result.item(0)
                 else:
                     raise ValueError("Temporal prediction gave unexpected result.")
-            else:
+            else:  # Standard model
+                if scaled_features is None:
+                    raise ValueError(
+                        "Scaled features are missing for standard model prediction."
+                    )
                 if not hasattr(model_instance.model, "predict_proba"):
                     raise AttributeError("Model missing 'predict_proba'.")
                 prediction_proba = model_instance.model.predict_proba(scaled_features)
+                # Log probability distribution (in this case, just the positive class prob)
                 readmission_probability = prediction_proba[0, 1]
+                logger.info(f"Predicted probability: {readmission_probability:.4f}")
+                # If multi-class, log prediction_proba[0]
+
+                # --- Conceptual Data Drift Detection ---
+                # 1. Load baseline statistics (e.g., mean, std, distribution percentiles)
+                #    for key features (like 'age') saved during training or from a reference dataset.
+                #    These could be stored alongside the model artifact or in a config file.
+                #    baseline_age_mean = config.get("monitoring", {}).get("baseline_age_mean", 55.0)
+                #    baseline_age_std = config.get("monitoring", {}).get("baseline_age_std", 15.0)
+
+                # 2. Compare current input distribution (using `request_stats['recent_ages']`)
+                #    to the baseline using statistical tests (e.g., KS test, Z-score).
+                #    if request_stats["recent_ages"]: # Check if deque is not empty
+                #        current_mean_age = np.mean(list(request_stats["recent_ages"]))
+                #        if abs(current_mean_age - baseline_age_mean) > 3 * baseline_age_std: # Example Z-score check
+                #            logger.warning(f"Potential data drift detected in 'age'. Mean: {current_mean_age:.2f}, Baseline Mean: {baseline_age_mean:.2f}")
+                #            # Trigger alert or further investigation
+
+                # 3. For categorical features, compare frequency distributions.
+
         except Exception as predict_e:
             logger.error(f"Prediction error: {predict_e}", exc_info=True)
             raise HTTPException(status_code=500, detail="Prediction execution error.")
@@ -345,24 +423,40 @@ async def predict_readmission(
                     def predict_fn_shap(X_np):
                         if hasattr(model_instance.model, "predict_proba"):
                             proba = model_instance.model.predict_proba(X_np)
-                            return proba[:, 1]
+                            return proba[:, 1]  # Return probability of positive class
                         else:
+                            # Fallback if predict_proba not available (less ideal for SHAP)
                             return model_instance.model.predict(X_np)
 
+                    # Ensure background data columns match scaled_features columns
+                    # This assumes expected_features is the list of columns for standard models
+                    background_df = pd.DataFrame(
+                        shap_background_data, columns=expected_features
+                    )
+
                     explainer = shap.KernelExplainer(
-                        predict_fn_shap, shap_background_data.values
+                        predict_fn_shap, background_df.values  # Use .values
                     )
+                    # Ensure scaled_features is 2D numpy array
+                    scaled_features_np = np.array(scaled_features)
+                    if scaled_features_np.ndim == 1:
+                        scaled_features_np = scaled_features_np.reshape(1, -1)
+
                     shap_values_single = explainer.shap_values(
-                        scaled_features[0, :].reshape(1, -1)
+                        scaled_features_np[0, :]  # Explain the first (only) instance
                     )
-                    if isinstance(shap_values_single, list): # Handle multi-output
+                    # KernelExplainer might return a list for binary classification, take the second element
+                    if (
+                        isinstance(shap_values_single, list)
+                        and len(shap_values_single) == 2
+                    ):
                         shap_values_single = shap_values_single[1]
                     shap_values_single = shap_values_single.flatten()
 
                     # Call LLM helper
                     explanation_text = explain_shap_with_llm(
                         shap_values_single=shap_values_single,
-                        feature_names=expected_features, # Standard models use list
+                        feature_names=expected_features,  # Standard models use list
                         prediction_prob=readmission_probability,
                         top_n=3,
                     )
@@ -380,18 +474,36 @@ async def predict_readmission(
         if explain:
             response_data["explanation"] = explanation_text
 
-        return response_data
+        # --- Latency Logging ---
+        end_time = time.time()
+        latency = end_time - start_time
+        logger.info(f"Prediction request completed in {latency:.4f} seconds.")
+
+        return response_data  # Correctly indented return
 
     except HTTPException as http_e:
+        # Log latency even for handled HTTP exceptions
+        end_time = time.time()
+        latency = end_time - start_time
+        logger.warning(
+            f"HTTPException in prediction after {latency:.4f} seconds: {http_e.detail}"
+        )
         raise http_e
     except Exception as e:
-        logger.error(f"Unexpected prediction endpoint error: {e}", exc_info=True)
+        # Log latency for unexpected errors
+        end_time = time.time()
+        latency = end_time - start_time
+        logger.error(
+            f"Unexpected prediction endpoint error after {latency:.4f} seconds: {e}",
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="Internal server error.")
 
 
+# Correctly unindented __main__ block
 if __name__ == "__main__":
     # Run the API using Uvicorn
-    if not config: # Load config if startup didn't run (e.g., direct execution)
+    if not config:  # Load config if startup didn't run (e.g., direct execution)
         try:
             config = load_config()
         except Exception:

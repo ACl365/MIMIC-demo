@@ -2,13 +2,13 @@
 Feature engineering modules for the MIMIC project.
 """
 
+from .build_features import build_features
 from .feature_extractors import (
     BaseFeatureExtractor,
-    DemographicFeatureExtractor,
     ClinicalFeatureExtractor,
+    DemographicFeatureExtractor,
     DiagnosisFeatureExtractor,
 )
-from .build_features import build_features
 
 __all__ = [
     "BaseFeatureExtractor",

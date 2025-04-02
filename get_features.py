@@ -1,9 +1,11 @@
-import pickle
 import os
+import pickle
 
 # Construct the absolute path to the model file relative to the script location
 script_dir = os.path.dirname(__file__)
-model_path = os.path.join(script_dir, "models", "readmission_model.pkl") # Path relative to script
+model_path = os.path.join(
+    script_dir, "models", "readmission_model.pkl"
+)  # Path relative to script
 
 try:
     if not os.path.exists(model_path):

@@ -16,7 +16,7 @@
             --light-color: #ecf0f1;
             --dark-color: #2c3e50;
         }
-        
+
         body {
             font-family: 'Inter', sans-serif;
             color: var(--dark-color);
@@ -24,17 +24,17 @@
             line-height: 1.6;
             padding-top: 56px;
         }
-        
+
         .hero {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             color: white;
             padding: 6rem 0;
         }
-        
+
         .section {
             padding: 5rem 0;
         }
-        
+
         .card {
             border: none;
             border-radius: 10px;
@@ -42,12 +42,12 @@
             transition: transform 0.3s, box-shadow 0.3s;
             height: 100%;
         }
-        
+
         .card:hover {
             transform: translateY(-5px);
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
         }
-        
+
         .feature-icon {
             width: 80px;
             height: 80px;
@@ -60,15 +60,15 @@
             font-size: 2rem;
             color: var(--secondary-color);
         }
-        
+
         .text-accent {
             color: var(--accent-color);
         }
-        
+
         .bg-light-custom {
             background-color: var(--light-color);
         }
-        
+
         .tech-badge {
             display: inline-block;
             padding: 0.5rem 1rem;
@@ -77,7 +77,7 @@
             border-radius: 30px;
             font-weight: 500;
         }
-        
+
         footer {
             background-color: var(--primary-color);
             color: white;
@@ -88,7 +88,7 @@
             position: relative;
             padding-left: 2rem;
         }
-        
+
         .timeline::before {
             content: "";
             position: absolute;
@@ -98,12 +98,12 @@
             height: 100%;
             background: var(--secondary-color);
         }
-        
+
         .timeline-item {
             position: relative;
             padding-bottom: 2rem;
         }
-        
+
         .timeline-item::before {
             content: "";
             position: absolute;
@@ -191,11 +191,11 @@
                     <div class="card p-4">
                         <h3 class="h4 mb-3">About This Project</h3>
                         <p>This project presents a <strong>Strategic Proof-of-Concept (PoC)</strong> utilizing the <strong>MIMIC-III Clinical Database Demo (v1.4)</strong>. This complex, publicly available dataset was specifically chosen to demonstrate a comprehensive, enterprise-ready MLOps pipeline capable of handling real-world healthcare data challenges. The focus is on showcasing methodological rigor and end-to-end best practices, building a foundation for reliable and scalable AI in healthcare.</p>
-                        
+
                         <div class="alert alert-info">
                             <strong>Designed for Scale:</strong> The pipeline is architected using principles and technologies suitable for the full MIMIC dataset (>40,000 patients, terabytes of data) and production EHR systems. The results presented here are illustrative, demonstrating the insights achievable through a process built for reliability and continuous improvement at scale.
                         </div>
-                        
+
                         <h4 class="mt-4">Project Goals</h4>
                         <ul>
                             <li>Implement a complete MLOps pipeline from data processing to deployment</li>
@@ -205,7 +205,7 @@
                             <li>Provide comprehensive documentation and reproducible workflows</li>
                             <li>Provide a production-ready foundation that scales to the full MIMIC dataset and beyond</li>
                         </ul>
-                        
+
                         <h4 class="mt-4">Scalability Considerations</h4>
                         <p>Transitioning from this PoC to the full MIMIC dataset or a production EHR system involves addressing key scalability challenges:</p>
                         <div class="row g-3">
@@ -247,7 +247,7 @@
                                  </div>
                              </div>
                         </div>
-                        
+
                         <h4 class="mt-4">Resource Estimation</h4>
                         <div class="row mt-3">
                             <div class="col-md-12">
@@ -289,7 +289,7 @@
                                 </table>
                             </div>
                         </div>
-                        
+
                         <h4 class="mt-4">Prediction Tasks</h4>
                         <p>The project focuses on three key prediction tasks in critical care:</p>
                         <ol>
@@ -317,7 +317,7 @@
                     <div class="card p-4">
                         <h3 class="h4 mb-3">Architecture Overview</h3>
                         <p>The project follows a structured MLOps pipeline from data ingestion to deployment:</p>
-                        
+
                         <div class="timeline">
                             <div class="timeline-item">
                                 <h4>Data Sources</h4>
@@ -388,12 +388,12 @@
         # Incorporate learned time embeddings
         # based on irregular measurement intervals
         time_encoded_x = self.time_encoder(x, time_intervals)
-        
+
         lstm_out, _ = self.lstm(time_encoded_x)
-        
+
         # Attention mechanism identifies key time steps
         context, attn_weights = self.attention(lstm_out)
-        
+
         output = self.classifier(context)
         return torch.sigmoid(output), attn_weights</pre>
                         </div>
@@ -408,8 +408,21 @@
                         <div class="feature-icon mx-auto">
                             <i class="fas fa-balance-scale"></i>
                         </div>
-                        <h3 class="h4 mb-3">Imbalance Handling</h3>
-                        <p>Comprehensive analysis and implementation of techniques for handling class imbalance, including SMOTE, class weights, and random sampling approaches.</p>
+                        <h3 class="h4 mb-3">Imbalance Handling Analysis</h3>
+                        <p>Comprehensive analysis of techniques for handling the significant class imbalance inherent in readmission prediction. Compared Baseline, Class Weights, Random Oversampling, SMOTE, and Random Undersampling using cross-validation.</p>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <h5 class="h6">PR Curves</h5>
+                                <img src="assets/imbalance_pr_curves.png" alt="Imbalance PR Curves" class="img-fluid rounded shadow mb-2">
+                                <p><small>Precision-Recall curves show the trade-off. Techniques like Class Weights and Oversampling improve recall significantly over baseline.</small></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="h6">Metrics Comparison</h5>
+                                <img src="assets/imbalance_metrics_comparison.png" alt="Imbalance Metrics Comparison" class="img-fluid rounded shadow mb-2">
+                                <p><small>Bar chart comparing key metrics (Precision, Recall, F1, PR AUC) across techniques. Highlights the gains from specific methods.</small></p>
+                            </div>
+                        </div>
+                        <p class="mt-2"><small>See <code>src/models/imbalance_analysis.py</code> for implementation and <code>assets/imbalance_results_summary.csv</code> for full results.</small></p>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -433,8 +446,26 @@
                         <div class="feature-icon mx-auto">
                             <i class="fas fa-shield-alt"></i>
                         </div>
-                        <h3 class="h4 mb-3">Ethical AI Framework</h3>
-                        <p>Comprehensive approach to fairness, transparency, and bias mitigation in healthcare AI, with continuous monitoring for ethical considerations.</p>
+                        <h3 class="h4 mb-3">Ethical AI & Fairness Analysis</h3>
+                        <p>Incorporating fairness assessments and model calibration checks as part of the MLOps pipeline.</p>
+                        <div class="row mt-3">
+                             <div class="col-md-6">
+                                <h5 class="h6">Fairness (Recall by Gender)</h5>
+                                <img src="assets/fairness_recall_gender.png" alt="Fairness Analysis - Recall by Gender" class="img-fluid rounded shadow mb-2">
+                                <p><small>Comparison of model recall between male ('m') and female ('f') groups using the 'Class Weights' model. Aims to identify potential performance disparities.</small></p>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="h6">Confusion Matrix (Class Weights)</h5>
+                                <img src="assets/confusion_matrix_class_weights.png" alt="Confusion Matrix - Class Weights Model" class="img-fluid rounded shadow mb-2">
+                                <p><small>Detailed confusion matrix (raw counts and normalized) for the 'Class Weights' model, showing true/false positives and negatives.</small></p>
+                            </div>
+                             <div class="col-md-6 mt-3">
+                                <h5 class="h6">Calibration Curve (Class Weights)</h5>
+                                <img src="assets/calibration_curve_class_weights.png" alt="Calibration Curve - Class Weights Model" class="img-fluid rounded shadow mb-2">
+                                <p><small>Reliability diagram showing how well the predicted probabilities from the 'Class Weights' model match the observed frequencies.</small></p>
+                            </div>
+                        </div>
+                         <p class="mt-2"><small>Fairness analysis implemented in <code>src/visualization/generate_fairness_plots.py</code>. See <a href="docs/ethical_considerations.md">Ethical Considerations</a> for discussion.</small></p>
                     </div>
                 </div>
                 <div class="col-md-4">
@@ -466,6 +497,29 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            <!-- New Card for Model Interpretability -->
+             <div class="col-md-4">
+                <div class="card p-4">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    <h3 class="h4 mb-3">Model Interpretability</h3>
+                    <p>Understanding model predictions using feature importance and SHAP values.</p>
+                     <div class="row mt-3">
+                        <div class="col-md-12">
+                            <h5 class="h6">Feature Coefficients (Class Weights)</h5>
+                            <img src="assets/feature_coefficients_class_weights.png" alt="Feature Coefficients - Class Weights Model" class="img-fluid rounded shadow mb-2">
+                            <p><small>Top positive and negative coefficients from the Logistic Regression model (with Class Weights), indicating feature influence on log-odds.</small></p>
+                        </div>
+                        <div class="col-md-12 mt-3">
+                            <h5 class="h6">SHAP Summary Plot</h5>
+                            <img src="assets/shap_summary_plot.png" alt="SHAP Summary Plot" class="img-fluid rounded shadow mb-2">
+                            <p><small>SHAP summary plot (beeswarm) showing the impact of each feature on the model's output for individual predictions across a sample.</small></p>
+                        </div>
+                    </div>
+                    <p class="mt-2"><small>SHAP analysis implemented in <code>src/visualization/generate_shap_plots.py</code>.</small></p>
                 </div>
             </div>
         </div>
@@ -513,11 +567,11 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps: [...]
-  
+
   retrain-model:
     needs: test
     steps: [...]
-    
+
   deploy-if-improved:
     needs: retrain-model
     steps: [...]</pre>
@@ -537,7 +591,7 @@ jobs:
                     <p class="lead text-muted">Key insights from our analysis and modeling</p>
                 </div>
             </div>
-            
+
             <!-- Imbalance Analysis Visualizations -->
             <div class="row mb-5">
                 <div class="col-lg-12">
@@ -545,7 +599,7 @@ jobs:
                         <div class="card-body">
                             <h3 class="h4 mb-4">Imbalance Handling Techniques Comparison</h3>
                             <p class="mb-4">One of the key challenges in healthcare prediction is dealing with class imbalance. In our dataset, only 12.1% of admissions resulted in readmission, creating a 7.2:1 imbalance ratio. We implemented and compared several techniques to address this challenge:</p>
-                            
+
                             <div class="row align-items-center">
                                 <div class="col-lg-6">
                                     <img src="results/imbalance_analysis/metrics_comparison.png" alt="Imbalance Handling Techniques Comparison" class="img-fluid rounded shadow mb-4">
@@ -560,7 +614,7 @@ jobs:
                                     </ul>
                                 </div>
                             </div>
-                            
+
                             <div class="row mt-4">
                                 <div class="col-lg-6 order-lg-2">
                                     <img src="results/imbalance_analysis/pr_curves.png" alt="Precision-Recall Curves" class="img-fluid rounded shadow mb-4">
@@ -575,7 +629,7 @@ jobs:
                     </div>
                 </div>
             </div>
-            
+
             <!-- Time-Aware LSTM Visualizations -->
             <div class="row">
                 <div class="col-lg-12">
@@ -583,7 +637,7 @@ jobs:
                         <div class="card-body">
                             <h3 class="h4 mb-4">Time-Aware LSTM Model Performance</h3>
                             <p class="mb-4">Our advanced temporal modeling approach uses a Time-Aware LSTM architecture to capture the sequential nature of clinical data. These visualizations demonstrate the model's performance and training characteristics:</p>
-                            
+
                             <div class="row align-items-center">
                                 <div class="col-lg-6">
                                     <img src="notebooks/results/time_aware_lstm_roc_pr_curves.png" alt="ROC and PR Curves for Time-Aware LSTM" class="img-fluid rounded shadow mb-4">
@@ -596,7 +650,7 @@ jobs:
                                     <p>These curves show the model's learning progression during training. The convergence pattern demonstrates how our temporal approach effectively learns from sequential clinical data, with validation metrics stabilizing after sufficient epochs.</p>
                                 </div>
                             </div>
-                            
+
                             <div class="alert alert-info mt-3">
                                 <strong>Process Enabling Reliable Performance:</strong> Our rigorous MLOps pipeline, including automated data validation and versioned experiment tracking (e.g., using MLflow), allowed us to systematically evaluate imbalance techniques and temporal models. While metrics on this subset are illustrative (e.g., AUC-PR ~0.35 for SMOTE-enhanced LightGBM, ~0.40 for Time-Aware LSTM), the process ensures we can reliably reproduce, monitor, and improve these results as data scales. We project significant performance gains (targeting AUC-PR > 0.50) on the full dataset based on literature benchmarks and the capabilities demonstrated here.
                             </div>
@@ -621,7 +675,7 @@ jobs:
                     <div class="card p-4">
                         <h3 class="h4 mb-3">Applied Fairness Evaluation</h3>
                         <p>We go beyond simply stating ethical principles by actively measuring and addressing potential biases using established fairness metrics:</p>
-                        
+
                         <div class="row mt-4">
                              <div class="col-md-6">
                                  <h4>Fairness Metrics & Results</h4>
@@ -652,11 +706,11 @@ jobs:
                                  </div>
                              </div>
                         </div>
-                        
+
                         <div class="alert alert-secondary mt-4">
                             <strong>Fairness-Performance Trade-offs:</strong> Our analysis revealed an inherent tension between demographic parity and overall model performance. We chose to prioritize equal opportunity (similar recall across groups) over demographic parity, as missing high-risk patients has more severe clinical consequences than false positives. This decision was made in consultation with clinical stakeholders and is continuously reassessed.
                         </div>
-                        
+
                         <p class="mt-3">For a detailed discussion of our ethical framework, see the <a href="docs/ethical_considerations.md">Ethical Considerations documentation</a>.</p>
                     </div>
                 </div>

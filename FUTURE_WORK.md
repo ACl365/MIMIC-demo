@@ -1,666 +1,134 @@
-# Advanced AI/ML Techniques for MIMIC Readmission Prediction
+# Advanced AI/ML & MLOps Enhancements for MIMIC Readmission Prediction
 
-This document outlines advanced AI/ML techniques that could enhance the current MIMIC readmission prediction project, moving beyond the standard machine learning approaches currently implemented.
+This document outlines potential future directions for the MIMIC readmission prediction project, focusing on incorporating more advanced AI/ML techniques and strengthening the MLOps pipeline to build a truly enterprise-grade, reliable, and insightful system.
 
 ## Limitations of Current Approaches
 
-While our current models (Logistic Regression, Random Forest, XGBoost, LightGBM) provide a solid foundation for predicting hospital readmissions, they have several limitations when applied to complex clinical time-series data:
+While our current models (Logistic Regression, Random Forest, XGBoost, LightGBM, as explored in `src/models/imbalance_analysis.py`) provide a solid foundation, they face limitations with complex clinical time-series data:
 
-1. **Limited Temporal Understanding**: Standard ML models treat each feature as independent and static, failing to capture the temporal dynamics and sequential patterns in patient data. They don't inherently understand that vital signs measured at different times have relationships.
-
-2. **Inability to Model Long-Range Dependencies**: Traditional models struggle to capture long-range dependencies in patient histories, potentially missing important patterns that develop over extended periods.
-
-3. **Feature Engineering Dependency**: Current approaches rely heavily on manual feature engineering, which may not capture all relevant patterns in the data and requires significant domain expertise.
-
-4. **Limited Contextual Understanding**: Standard models don't effectively capture the contextual relationships between different clinical events, medications, and procedures.
-
-5. **Difficulty with Irregular Sampling**: Healthcare data often has irregular sampling intervals, which standard models don't handle well without significant preprocessing.
-
-6. **Suboptimal Performance on Imbalanced Data**: While we've implemented techniques like SMOTE, more sophisticated approaches could better address the class imbalance inherent in readmission prediction.
-
-7. **Limited Interpretability**: While SHAP values provide some insight, more advanced explainability techniques could offer clinicians more actionable and intuitive explanations.
+1.  **Limited Temporal Understanding**: Standard ML models often treat features statically, struggling to capture the significance of *when* events occur or the irregular intervals between measurements. The PoC LSTM (`notebooks/advanced_temporal_model_poc.ipynb`) begins to address this, but more advanced sequence models offer further improvements.
+2.  **Inability to Model Long-Range Dependencies**: Events early in an admission can influence outcomes days later. Traditional models may miss these long-range dependencies.
+3.  **Feature Engineering Dependency**: Current approaches rely heavily on manual feature engineering (`src/features/feature_extractors.py`), which is time-consuming, requires deep domain expertise, and might not capture all latent patterns.
+4.  **Limited Contextual Understanding**: Standard models don't inherently model the complex interplay between diagnoses, procedures, medications, and evolving patient state.
+5.  **Difficulty with Irregular Sampling**: Healthcare data is inherently asynchronous. While aggregation helps, sequence models can handle this more naturally.
+6.  **Correlation vs. Causation**: Current models identify correlations, but understanding the *causal* impact of interventions or risk factors requires specialized techniques.
+7.  **Interpretability Nuances**: While SHAP provides feature importance (`src/visualization/generate_shap_plots.py`), explaining *temporal* contributions or complex interactions requires more advanced methods.
 
 ## Advanced Techniques for Future Implementation
 
-### 1. Temporal Models
+### 1. Temporal Models: Capturing Patient Trajectories
 
-#### Transformer-Based Approaches
+Moving beyond static features to model the patient journey over time.
 
-[BEHRT (BERT for Electronic Health Records)](https://arxiv.org/abs/1907.09538) and similar transformer architectures could significantly improve our ability to model temporal relationships in EHR data:
+#### Transformer-Based Approaches (e.g., BEHRT)
 
-```python
-# Conceptual implementation of a BEHRT-like model for EHR data
-class EHRTransformer(nn.Module):
-    def __init__(self, vocab_size, d_model=768, nhead=8, num_encoder_layers=6):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, d_model)
-        self.position_encoder = PositionalEncoding(d_model)
-        self.transformer_encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model, nhead), 
-            num_encoder_layers
-        )
-        self.classifier = nn.Linear(d_model, 1)
-        
-    def forward(self, x, mask=None):
-        # x shape: [batch_size, seq_len]
-        x = self.embedding(x)
-        x = self.position_encoder(x)
-        x = self.transformer_encoder(x, src_key_padding_mask=mask)
-        # Use [CLS] token for classification
-        return torch.sigmoid(self.classifier(x[:, 0, :]))
-```
+*   **Concept:** Apply Transformer architectures, like BERT adapted for EHR (BEHRT), to model sequences of clinical events (diagnoses, procedures, medications coded as 'tokens').
+*   **Advantages:** Excellent at capturing long-range dependencies and complex contextual relationships via self-attention. Can be pre-trained on large EHR datasets and fine-tuned for specific tasks like readmission. Handles variable-length sequences well.
+*   **Relevance:** Directly addresses limitations #1, #2, #4, and potentially #3 by learning representations from raw event sequences. Outperforms basic LSTMs in many sequence tasks.
+*   **Implementation:** Requires significant data preprocessing to create event sequences and substantial computational resources for training/pre-training.
 
-Benefits:
-- Captures complex temporal dependencies through self-attention
-- Handles variable-length sequences naturally
-- Pre-training on large EHR datasets could improve performance on smaller datasets
+[Conceptual Python Code Block Removed - EHRTransformer]
 
-#### Recurrent Neural Networks (RNNs/LSTMs/GRUs)
+#### Enhanced Recurrent Neural Networks (RNNs/LSTMs/GRUs)
 
-For capturing sequential patterns in patient trajectories:
+*   **Concept:** Build upon the Time-Aware LSTM PoC (`notebooks/advanced_temporal_model_poc.ipynb`, `notebooks/time_aware_lstm.py`) and the enhanced version (`notebooks/advanced_temporal_model_enhanced.ipynb`). Incorporate more sophisticated time encoding, attention mechanisms, and potentially multi-modal inputs (e.g., combining structured vitals/labs with note embeddings).
+*   **Advantages:** Explicitly models sequences and time intervals. Attention highlights critical events. Generally less computationally intensive than large Transformers.
+*   **Relevance:** Addresses limitations #1, #5. Good baseline for sequence modeling.
+*   **Implementation:** Refine time encoding (e.g., Time2Vec), explore different attention types (e.g., multi-head attention), integrate features from clinical notes.
 
-```python
-# Conceptual implementation of an LSTM for time-series EHR data
-class TimeAwarePatientLSTM(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim=1, num_layers=2, dropout=0.2):
-        super().__init__()
-        self.lstm = nn.LSTM(
-            input_dim, 
-            hidden_dim, 
-            num_layers=num_layers, 
-            dropout=dropout, 
-            batch_first=True
-        )
-        self.time_encoder = TimeEncoder(input_dim)  # Custom time interval encoding
-        self.attention = AttentionLayer(hidden_dim)  # Custom attention mechanism
-        self.classifier = nn.Linear(hidden_dim, output_dim)
-        
-    def forward(self, x, time_intervals):
-        # Encode time intervals between measurements
-        x = self.time_encoder(x, time_intervals)
-        # Process sequence
-        outputs, (h_n, _) = self.lstm(x)
-        # Apply attention to focus on important time steps
-        context = self.attention(outputs)
-        # Classify
-        return torch.sigmoid(self.classifier(context))
-```
-
-Benefits:
-- Explicitly models sequential dependencies
-- Can incorporate time intervals between events
-- Attention mechanisms can highlight clinically significant events
+[Conceptual Python Code Block Removed - EnhancedPatientLSTM]
 
 #### Temporal Convolutional Networks (TCNs)
 
-TCNs could effectively capture multi-scale temporal patterns:
+*   **Concept:** Use causal convolutions with dilations to capture temporal patterns at different scales.
+*   **Advantages:** Stable training, parallelizable computation, potentially long effective history size.
+*   **Relevance:** Addresses limitations #1, #2. Alternative to RNNs/Transformers.
+*   **Implementation:** Requires careful padding and network design. Libraries like `pytorch-tcn` can simplify implementation.
 
-```python
-# Conceptual implementation of a TCN for EHR data
-class EHRTemporalCNN(nn.Module):
-    def __init__(self, input_channels, output_channels, kernel_sizes=[3, 5, 7], num_filters=64):
-        super().__init__()
-        self.convs = nn.ModuleList([
-            nn.Conv1d(input_channels, num_filters, k, padding=k//2) 
-            for k in kernel_sizes
-        ])
-        self.global_pool = nn.AdaptiveMaxPool1d(1)
-        self.classifier = nn.Linear(num_filters * len(kernel_sizes), output_channels)
-        
-    def forward(self, x):
-        # x shape: [batch_size, seq_len, features]
-        x = x.transpose(1, 2)  # -> [batch_size, features, seq_len]
-        conv_results = []
-        for conv in self.convs:
-            conv_results.append(self.global_pool(F.relu(conv(x))).squeeze(-1))
-        x = torch.cat(conv_results, dim=1)
-        return torch.sigmoid(self.classifier(x))
-```
+### 2. Graph Neural Networks (GNNs): Modeling Relationships
 
-Benefits:
-- Captures patterns at multiple time scales
-- Efficient parallel computation
-- Can handle very long sequences
+*   **Concept:** Represent relationships (e.g., patient similarity, treatment co-occurrence, disease progression) as graphs and apply GNNs to learn from this structure.
+*   **Advantages:** Captures complex, non-sequential relationships missed by other models. Can incorporate diverse information types (nodes/edges).
+*   **Relevance:** Addresses limitation #4. Useful for tasks like patient stratification or understanding treatment pathways.
+*   **Implementation:** Requires defining meaningful graph structures from EHR data (challenging) and using libraries like PyTorch Geometric or DGL.
 
-### 2. Graph Neural Networks (GNNs)
+### 3. Causal Inference Techniques: Moving Beyond Correlation
 
-GNNs could model complex relationships between patients, treatments, and outcomes:
+*   **Goal:** Estimate the *causal* effect of specific factors (e.g., a medication, a comorbidity, an intervention) on the risk of readmission, controlling for confounding variables present in observational data like MIMIC. This provides more actionable insights than simple correlations.
+*   **Relevance:** Addresses limitation #6. Crucial for evaluating interventions and understanding true risk drivers.
 
-```python
-# Conceptual implementation of a GNN for patient-treatment graphs
-class PatientTreatmentGNN(nn.Module):
-    def __init__(self, node_features, edge_features, hidden_dim=64, num_layers=3):
-        super().__init__()
-        self.node_encoder = nn.Linear(node_features, hidden_dim)
-        self.edge_encoder = nn.Linear(edge_features, hidden_dim)
-        self.gnn_layers = nn.ModuleList([
-            GATConv(hidden_dim, hidden_dim) for _ in range(num_layers)
-        ])
-        self.classifier = nn.Linear(hidden_dim, 1)
-        
-    def forward(self, x, edge_index, edge_attr):
-        # Encode nodes and edges
-        x = self.node_encoder(x)
-        edge_attr = self.edge_encoder(edge_attr)
-        
-        # Apply GNN layers
-        for layer in self.gnn_layers:
-            x = layer(x, edge_index, edge_attr)
-            x = F.relu(x)
-            
-        # Readout for patient nodes (assuming patient nodes are indexed first)
-        patient_embeddings = x[:num_patients]
-        return torch.sigmoid(self.classifier(patient_embeddings))
-```
+#### Doubly Robust Estimation (DRE)
 
-Applications:
-- **Patient Similarity Networks**: Connect patients with similar characteristics to improve predictions
-- **Treatment-Outcome Graphs**: Model relationships between treatments, diagnoses, and outcomes
-- **Temporal Knowledge Graphs**: Represent patient journeys as evolving knowledge graphs
-
-### 3. Causal Inference Techniques
-
-Moving beyond correlation to understand causal drivers of readmission:
-
-#### Doubly Robust Estimation
-
-```python
-# Conceptual implementation of Doubly Robust Estimation
-def doubly_robust_estimation(outcomes, treatments, covariates, propensity_model, outcome_model):
-    # Estimate propensity scores
-    propensity_scores = propensity_model.predict_proba(covariates)[:, 1]
-    
-    # Estimate potential outcomes
-    potential_outcomes_treated = outcome_model.predict(
-        pd.concat([covariates, pd.DataFrame({'treatment': np.ones(len(covariates))})], axis=1)
-    )
-    potential_outcomes_control = outcome_model.predict(
-        pd.concat([covariates, pd.DataFrame({'treatment': np.zeros(len(covariates))})], axis=1)
-    )
-    
-    # Doubly robust estimator
-    dr_estimator = np.mean(
-        treatments * (outcomes - potential_outcomes_treated) / propensity_scores + 
-        potential_outcomes_treated - 
-        (1 - treatments) * (outcomes - potential_outcomes_control) / (1 - propensity_scores) - 
-        potential_outcomes_control
-    )
-    
-    return dr_estimator
-```
+*   **Concept:** Combines a model for the treatment assignment (propensity score) and a model for the outcome. Provides an unbiased estimate if at least *one* of the models is correctly specified.
+*   **Application:** Estimate the Average Treatment Effect (ATE) of a specific intervention (e.g., receiving a specific medication vs. not) on readmission probability across the population.
 
 #### Causal Forests
 
-```python
-# Example using EconML's causal forest implementation
-from econml.dml import CausalForestDML
-
-# X: features, T: treatment, Y: outcome
-causal_forest = CausalForestDML(
-    model_y=LGBMRegressor(),
-    model_t=LGBMClassifier(),
-    n_estimators=2000,
-    min_samples_leaf=5,
-    max_depth=10,
-    verbose=0,
-    random_state=42
-)
-
-# Fit the model
-causal_forest.fit(X, T, Y)
-
-# Estimate treatment effects
-treatment_effects = causal_forest.effect(X)
-
-# Identify high-risk patients who would benefit most from interventions
-high_benefit_patients = X[treatment_effects < -0.1]  # Negative effect means reduced readmission risk
-```
+*   **Concept:** An extension of Random Forests designed to estimate heterogeneous treatment effects (HTE) – how effects vary across different patient subgroups.
+*   **Application:** Identify patient subgroups (e.g., based on age, specific comorbidities) who benefit *most* or *least* from a particular intervention regarding readmission risk. Allows for personalized intervention strategies.
 
 #### Targeted Maximum Likelihood Estimation (TMLE)
 
-```python
-# Conceptual implementation using the tmle package
-from tmle import tmle
+*   **Concept:** A semi-parametric efficient estimation method that updates an initial outcome model estimate to reduce bias regarding the treatment assignment mechanism. Often considered highly robust.
+*   **Application:** Similar to DRE for estimating ATE, but with different statistical properties and implementation details.
 
-# Estimate the average treatment effect
-tmle_result = tmle(
-    df=patient_data,
-    exposure_col='intervention',
-    outcome_col='readmission',
-    confounders=['age', 'gender', 'comorbidities', 'prior_visits'],
-    exposure_model='logistic',
-    outcome_model='logistic',
-    g_bounds=[0.05, 0.95]
-)
-
-print(f"Average Treatment Effect: {tmle_result.risk_difference}")
-print(f"95% CI: ({tmle_result.risk_difference_ci[0]}, {tmle_result.risk_difference_ci[1]})")
-```
-
-Benefits:
-- Identifies which interventions actually cause reduced readmissions
-- Helps target interventions to patients who will benefit most
-- Provides more robust estimates of treatment effects
+[Conceptual Python Code Block Removed - CausalForestDML Example]
 
 ### 4. Generative AI Applications
 
-#### Synthetic Data Generation
+Leveraging generative models for data augmentation, feature extraction, and explainability.
 
-```python
-# Conceptual implementation of a GAN for EHR data synthesis
-class EHRGenerator(nn.Module):
-    def __init__(self, latent_dim, output_dim):
-        super().__init__()
-        self.model = nn.Sequential(
-            nn.Linear(latent_dim, 128),
-            nn.LeakyReLU(0.2),
-            nn.Linear(128, 256),
-            nn.LeakyReLU(0.2),
-            nn.Linear(256, 512),
-            nn.LeakyReLU(0.2),
-            nn.Linear(512, output_dim),
-            nn.Tanh()
-        )
-        
-    def forward(self, z):
-        return self.model(z)
+#### Synthetic Data Generation (GANs, VAEs)
 
-class EHRDiscriminator(nn.Module):
-    def __init__(self, input_dim):
-        super().__init__()
-        self.model = nn.Sequential(
-            nn.Linear(input_dim, 512),
-            nn.LeakyReLU(0.2),
-            nn.Linear(512, 256),
-            nn.LeakyReLU(0.2),
-            nn.Linear(256, 128),
-            nn.LeakyReLU(0.2),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
-        
-    def forward(self, x):
-        return self.model(x)
-```
+*   **Concept:** Train Generative Adversarial Networks (GANs) or Variational Autoencoders (VAEs) on the real patient data to generate realistic synthetic patient records (sequences or static features).
+*   **Advantages over SMOTE:** Can capture complex multivariate distributions better than simpler interpolation (SMOTE). Useful for augmenting the minority class (readmissions), improving privacy (generating data without real patient info), and scenario simulation. Techniques like Differential Privacy can be integrated.
+*   **Relevance:** Addresses limitation #6 (imbalance) and enables privacy-preserving analysis. The `notebooks/synthetic_data_generator.py` provides a basic conceptual starting point.
 
-Advantages over SMOTE:
-- Generates more realistic synthetic patients
-- Preserves complex feature relationships
-- Can be conditioned on specific patient characteristics
-- Better privacy preservation through differential privacy techniques
+#### LLM-Based Feature Extraction & Explanation
 
-#### LLM-Based Feature Extraction from Clinical Notes
+*   **Clinical Note Feature Extraction:** Use pre-trained clinical LLMs (e.g., ClinicalBERT, GatorTron) to embed or extract structured concepts (diagnoses, symptoms, medications, severity) from unstructured clinical notes (e.g., discharge summaries). These extracted features can augment the structured data used by downstream models.
+    *   **Relevance:** Addresses limitation #3 (feature engineering) and #4 (context) by unlocking information trapped in text.
+*   **Natural Language Explanations:** Combine SHAP values (or other explainability outputs like LIME) with LLMs (potentially smaller, fine-tuned models) to generate human-readable explanations for individual predictions, translating feature contributions into clinical language.
+    *   **Relevance:** Addresses limitation #7 (interpretability), making model outputs more accessible to clinicians.
 
-```python
-# Conceptual implementation using a clinical BERT model
-from transformers import AutoTokenizer, AutoModel
-import torch
+[Conceptual Python Code Block Removed - LLM Explanation Example]
 
-# Load clinical BERT
-tokenizer = AutoTokenizer.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
-model = AutoModel.from_pretrained("emilyalsentzer/Bio_ClinicalBERT")
+### 5. Modern MLOps Enhancements
 
-def extract_clinical_features(notes):
-    # Tokenize notes
-    inputs = tokenizer(notes, padding=True, truncation=True, return_tensors="pt", max_length=512)
-    
-    # Get embeddings
-    with torch.no_grad():
-        outputs = model(**inputs)
-    
-    # Use CLS token as document embedding
-    embeddings = outputs.last_hidden_state[:, 0, :]
-    
-    # Extract clinical concepts
-    # (This would be expanded with a classifier head trained to extract specific entities)
-    return embeddings
-```
+Strengthening the pipeline for robustness, scalability, and continuous improvement.
 
-Benefits:
-- Extracts structured information from unstructured clinical notes
-- Captures nuanced clinical concepts that might be missed in coded data
-- Can identify risk factors not present in structured data
+#### Comprehensive Experiment Tracking (MLflow)
 
-#### Natural Language Explanations from SHAP Values
+*   **Concept:** Systematically log parameters, code versions, metrics, datasets (hashes/versions), model artifacts (including plots like confusion matrices, SHAP plots), and environment details for every experiment run using MLflow.
+*   **Implementation:** Integrate MLflow logging deeply into training scripts (`src/models/model.py`, `src/models/imbalance_analysis.py`), CI/CD pipelines, and hyperparameter tuning processes. Utilize MLflow Projects for reproducibility. Store artifacts in a robust backend (e.g., S3, Azure Blob Storage).
 
-```python
-# Conceptual implementation of NL explanations from SHAP values
-def generate_nl_explanation(shap_values, feature_names, patient_values, threshold=0.05):
-    # Get top features by absolute SHAP value
-    indices = np.argsort(-np.abs(shap_values))
-    
-    # Generate explanation
-    explanation = "This patient's readmission risk is influenced by:\n"
-    
-    for idx in indices:
-        if abs(shap_values[idx]) < threshold:
-            continue
-            
-        feature = feature_names[idx]
-        value = patient_values[idx]
-        impact = shap_values[idx]
-        
-        if impact > 0:
-            direction = "increases"
-        else:
-            direction = "decreases"
-            
-        # Convert feature names to human-readable form
-        feature_readable = feature.replace('_', ' ').title()
-        
-        # Format value based on feature type
-        if isinstance(value, bool):
-            value_str = "Yes" if value else "No"
-        elif isinstance(value, (int, float)):
-            value_str = f"{value:.2f}"
-        else:
-            value_str = str(value)
-            
-        explanation += f"- {feature_readable} of {value_str} {direction} risk by {abs(impact):.2f}\n"
-    
-    return explanation
-```
+[Conceptual Python Code Block Removed - MLflow Logging Example]
 
-Benefits:
-- Provides clinicians with intuitive, actionable explanations
-- Translates complex model outputs into natural language
-- Can be customized for different stakeholders (clinicians, administrators, patients)
+#### Robust CI/CD Pipeline (e.g., GitHub Actions)
 
-### 5. Modern MLOps Beyond the Basics
+*   **Concept:** Automate testing, building, evaluation, and potentially deployment triggered by code changes or data updates.
+*   **Implementation:** Define workflows (`.github/workflows/`) that include:
+    *   **Linting/Formatting:** Run `black`, `flake8`, `isort`.
+    *   **Unit Tests:** Execute `pytest` for `src/` components.
+    *   **Integration Tests:** Test interactions between components (e.g., data processing -> feature engineering).
+    *   **Data Validation:** Run checks (e.g., Great Expectations) on sample or incoming data.
+    *   **Model Training & Evaluation:** Trigger training scripts, log results to MLflow.
+    *   **Fairness & Bias Checks:** Run fairness analysis scripts (`src/visualization/generate_fairness_plots.py`) against predefined thresholds.
+    *   **Model Versioning/Registration:** Push validated models to MLflow Model Registry or similar.
+    *   **(Optional) Deployment:** Trigger deployment to staging/production API/dashboard environments after validation.
 
-#### Data Drift Detection
+#### Advanced Monitoring
 
-```python
-# Conceptual implementation using Evidently AI
-from evidently.dashboard import Dashboard
-from evidently.dashboard.tabs import DataDriftTab, CatTargetDriftTab
+*   **Data/Concept Drift:** Implement robust statistical tests (PSI, KS-test, Chi-squared) comparing training/reference data distributions with live prediction input data. Monitor model output distribution drift. Track performance metrics on recent data slices. Use tools like Evidently AI, NannyML, or custom implementations feeding into monitoring dashboards (Grafana).
+*   **Operational Monitoring:** Track API latency, error rates, resource utilization (CPU/GPU/Memory) using standard infrastructure monitoring tools.
+*   **Alerting:** Set up automated alerts (e.g., via PagerDuty, Slack) for significant drift detection, performance degradation, or operational issues.
 
-def monitor_data_drift(reference_data, current_data, output_path):
-    # Create dashboard
-    dashboard = Dashboard(tabs=[DataDriftTab(), CatTargetDriftTab()])
-    
-    # Calculate drift metrics
-    dashboard.calculate(reference_data, current_data, column_mapping=None)
-    
-    # Save dashboard
-    dashboard.save(output_path)
-    
-    # Get drift metrics
-    drift_metrics = dashboard.get_metrics()
-    
-    # Alert if significant drift detected
-    if drift_metrics['data_drift']['data_drift_score'] > 0.6:
-        send_alert("Significant data drift detected!")
-        
-    return drift_metrics
-```
+#### Scalable Deployment Strategies
 
-#### Custom Statistical Checks
-
-```python
-# Conceptual implementation of custom drift detection
-def detect_feature_drift(reference_data, current_data, feature, threshold=0.05):
-    """Detect drift in a numerical feature using Kolmogorov-Smirnov test"""
-    from scipy.stats import ks_2samp
-    
-    # Perform KS test
-    ks_result = ks_2samp(reference_data[feature].dropna(), current_data[feature].dropna())
-    
-    # Check if p-value is below threshold
-    is_drift = ks_result.pvalue < threshold
-    
-    return {
-        'feature': feature,
-        'drift_detected': is_drift,
-        'p_value': ks_result.pvalue,
-        'statistic': ks_result.statistic,
-        'threshold': threshold
-    }
-
-def detect_categorical_drift(reference_data, current_data, feature, threshold=0.05):
-    """Detect drift in a categorical feature using Chi-squared test"""
-    from scipy.stats import chi2_contingency
-    
-    # Get value counts
-    ref_counts = reference_data[feature].value_counts(normalize=True)
-    cur_counts = current_data[feature].value_counts(normalize=True)
-    
-    # Align categories
-    all_categories = sorted(set(ref_counts.index) | set(cur_counts.index))
-    ref_aligned = np.array([ref_counts.get(cat, 0) for cat in all_categories])
-    cur_aligned = np.array([cur_counts.get(cat, 0) for cat in all_categories])
-    
-    # Create contingency table
-    contingency = np.vstack([ref_aligned * len(reference_data), 
-                            cur_aligned * len(current_data)])
-    
-    # Perform chi-squared test
-    chi2, p_value, _, _ = chi2_contingency(contingency)
-    
-    # Check if p-value is below threshold
-    is_drift = p_value < threshold
-    
-    return {
-        'feature': feature,
-        'drift_detected': is_drift,
-        'p_value': p_value,
-        'statistic': chi2,
-        'threshold': threshold
-    }
-```
-
-#### Comprehensive MLflow Integration
-
-```python
-# Conceptual implementation of comprehensive MLflow tracking
-import mlflow
-import mlflow.sklearn
-from mlflow.models.signature import infer_signature
-
-def train_with_mlflow(X_train, y_train, X_test, y_test, model_params, model_type="xgboost"):
-    # Start MLflow run
-    with mlflow.start_run(run_name=f"{model_type}_training") as run:
-        # Log parameters
-        for param_name, param_value in model_params.items():
-            mlflow.log_param(param_name, param_value)
-            
-        # Log dataset characteristics
-        mlflow.log_param("training_samples", len(X_train))
-        mlflow.log_param("test_samples", len(X_test))
-        mlflow.log_param("positive_class_ratio", y_train.mean())
-        
-        # Initialize and train model
-        if model_type == "xgboost":
-            model = xgb.XGBClassifier(**model_params)
-        elif model_type == "lightgbm":
-            model = lgb.LGBMClassifier(**model_params)
-        else:
-            raise ValueError(f"Unsupported model type: {model_type}")
-            
-        model.fit(X_train, y_train)
-        
-        # Make predictions
-        y_pred = model.predict(X_test)
-        y_prob = model.predict_proba(X_test)[:, 1]
-        
-        # Log metrics
-        mlflow.log_metric("accuracy", accuracy_score(y_test, y_pred))
-        mlflow.log_metric("precision", precision_score(y_test, y_pred))
-        mlflow.log_metric("recall", recall_score(y_test, y_pred))
-        mlflow.log_metric("f1", f1_score(y_test, y_pred))
-        mlflow.log_metric("roc_auc", roc_auc_score(y_test, y_prob))
-        mlflow.log_metric("pr_auc", average_precision_score(y_test, y_prob))
-        
-        # Log confusion matrix as figure
-        fig, ax = plt.subplots(figsize=(10, 8))
-        plot_confusion_matrix(model, X_test, y_test, ax=ax)
-        mlflow.log_figure(fig, "confusion_matrix.png")
-        
-        # Log feature importance
-        if hasattr(model, "feature_importances_"):
-            importance_df = pd.DataFrame({
-                "feature": X_train.columns,
-                "importance": model.feature_importances_
-            }).sort_values("importance", ascending=False)
-            
-            # Log as CSV
-            mlflow.log_table(importance_df, "feature_importance.json")
-            
-            # Log as figure
-            fig, ax = plt.subplots(figsize=(12, 10))
-            importance_df.head(20).plot.barh(x="feature", y="importance", ax=ax)
-            mlflow.log_figure(fig, "feature_importance.png")
-        
-        # Log SHAP values
-        explainer = shap.Explainer(model)
-        shap_values = explainer(X_test)
-        
-        fig, ax = plt.subplots(figsize=(12, 10))
-        shap.summary_plot(shap_values, X_test, show=False)
-        mlflow.log_figure(fig, "shap_summary.png")
-        
-        # Log model with signature
-        signature = infer_signature(X_train, y_prob)
-        mlflow.sklearn.log_model(model, "model", signature=signature)
-        
-        # Log model performance on different patient subgroups
-        for subgroup, mask in get_patient_subgroups(X_test).items():
-            if mask.sum() > 20:  # Only evaluate if enough samples
-                subgroup_metrics = {
-                    f"{subgroup}_precision": precision_score(y_test[mask], model.predict(X_test[mask])),
-                    f"{subgroup}_recall": recall_score(y_test[mask], model.predict(X_test[mask])),
-                    f"{subgroup}_f1": f1_score(y_test[mask], model.predict(X_test[mask])),
-                    f"{subgroup}_roc_auc": roc_auc_score(y_test[mask], model.predict_proba(X_test[mask])[:, 1])
-                }
-                for metric_name, metric_value in subgroup_metrics.items():
-                    mlflow.log_metric(metric_name, metric_value)
-        
-        return model, run.info.run_id
-```
-
-#### Robust CI/CD Pipeline
-
-```yaml
-# .github/workflows/model-ci-cd.yml
-name: Model CI/CD Pipeline
-
-on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
-  schedule:
-    - cron: '0 0 * * 0'  # Weekly retraining
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install -r requirements-dev.txt
-    - name: Lint with flake8
-      run: |
-        flake8 src tests
-    - name: Type check with mypy
-      run: |
-        mypy src
-    - name: Run tests
-      run: |
-        pytest tests/
-    - name: Check code coverage
-      run: |
-        pytest --cov=src tests/
-        
-  build-and-push:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-    - name: Login to DockerHub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Build and push API image
-      uses: docker/build-push-action@v2
-      with:
-        context: ./api
-        push: true
-        tags: mimic-readmission-api:latest
-    - name: Build and push Dashboard image
-      uses: docker/build-push-action@v2
-      with:
-        context: ./dashboard
-        push: true
-        tags: mimic-readmission-dashboard:latest
-        
-  retrain-model:
-    needs: test
-    if: github.event_name == 'schedule' || (github.event_name == 'push' && contains(github.event.head_commit.message, '[retrain]'))
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    - name: Download latest data
-      run: |
-        python src/data/make_dataset.py
-    - name: Retrain model
-      run: |
-        python src/models/train_model.py --log-to-mlflow
-    - name: Evaluate model
-      run: |
-        python src/models/evaluate_model.py --latest
-    - name: Deploy if performance improved
-      run: |
-        python scripts/deploy_if_improved.py
-```
-
-## Strategic Implementation Plan
-
-To move beyond standard ML approaches, we recommend the following phased implementation:
-
-### Phase 1: Temporal Modelling (3-4 months)
-1. Restructure data pipeline to preserve temporal information
-2. Implement LSTM/GRU models for sequence modelling
-3. Compare with current models on key metrics
-4. Develop time-aware feature importance visualisation
-
-### Phase 2: Advanced Interpretability (2-3 months)
-1. Implement natural language explanations from SHAP values
-2. Develop interactive visualizations for temporal patterns
-3. Create patient-specific risk trajectory visualizations
-4. Validate explanations with clinical stakeholders
-
-### Phase 3: Causal Inference (3-4 months)
-1. Implement causal forest models for treatment effect estimation
-2. Develop intervention recommendation system
-3. Validate causal relationships with clinical experts
-4. Create dashboard for intervention impact analysis
-
-### Phase 4: Enhanced MLOps (2-3 months)
-1. Implement comprehensive drift detection
-2. Set up automated retraining triggers
-3. Develop model performance monitoring by patient subgroups
-4. Create alerting system for model degradation
+*   **Containerization:** Package the API (`api/`) and potentially the dashboard (`dashboard/`) using Docker for consistent deployment.
+*   **Infrastructure:** Deploy containers using scalable solutions like Kubernetes (EKS, GKE, AKS) or serverless platforms (AWS Lambda + API Gateway, Google Cloud Run) for the API. Deploy the dashboard using appropriate services (e.g., Streamlit Cloud, Heroku, container orchestration).
+*   **Deployment Patterns:** Implement strategies like Blue/Green or Canary deployments for safe rollouts of new model versions with minimal downtime and risk.
 
 ## Conclusion
 
-By implementing these advanced techniques, we can move beyond standard ML approaches to develop a more accurate, interpretable, and clinically useful readmission prediction system. The temporal nature of EHR data makes it particularly well-suited for sequence modelling approaches, while causal inference techniques can help identify effective interventions rather than just predicting outcomes.
+By strategically incorporating these advanced techniques and MLOps practices, this project can evolve from a PoC into a highly reliable, interpretable, fair, and impactful clinical decision support tool, demonstrating a deep understanding of modern AI/ML engineering principles applicable to complex, high-stakes domains like healthcare.

@@ -1,0 +1,48 @@
+name: Python CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10"] # Example Python versions
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        # Install linters if not in requirements.txt
+        pip install flake8 black
+
+    - name: Lint with flake8
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: Check formatting with black
+      run: |
+        black --check .
+
+    - name: Run tests
+      run: |
+        python run_tests.py # Assuming tests are run via this script
+
+    - name: (Bonus) Attempt to run imbalance analysis script
+      run: |
+        # This step might fail if data is not available in the CI environment,
+        # but it demonstrates the intent to include script execution in the pipeline.
+        # Consider adding flags or configurations to handle missing data gracefully.
+        python src/models/imbalance_analysis.py --cv-folds 2 --technique Baseline || echo "Imbalance analysis script failed (as potentially expected in CI), continuing..."

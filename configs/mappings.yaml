@@ -30,7 +30,7 @@ lab_tests:
     - "Alkaline Phosphatase"
     - "Bilirubin"
     - "Troponin"
-  
+
   # Mapping of standardized lab names to their variations in the dataset
   lab_name_variations:
     Glucose:
@@ -214,7 +214,7 @@ icd9_categories:
       - ["E000", "E999"]
     "Supplementary":
       - ["V01", "V91"]
-  
+
   # Specific ICD-9 codes for common conditions
   specific_codes:
     "Sepsis":

@@ -2,13 +2,13 @@
 Data processing modules for the MIMIC project.
 """
 
-from .processors import (
-    BaseProcessor,
-    PatientProcessor,
-    AdmissionProcessor,
-    ICUStayProcessor,
-)
 from .make_dataset import process_data
+from .processors import (
+    AdmissionProcessor,
+    BaseProcessor,
+    ICUStayProcessor,
+    PatientProcessor,
+)
 
 __all__ = [
     "BaseProcessor",

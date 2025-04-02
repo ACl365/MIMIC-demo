@@ -53,7 +53,7 @@ graph TD
     Process --> Procedures
     Process --> Diagnoses
     Process --> Temporal
-    
+
     Demographics --> Combine
     Vitals --> Combine
     Labs --> Combine
@@ -61,12 +61,12 @@ graph TD
     Procedures --> Combine
     Diagnoses --> Combine
     Temporal --> Combine
-    
+
     Combine --> Train
     Train --> Tune
     Tune --> Evaluate
     Evaluate --> Interpret
-    
+
     Interpret --> API
     Interpret --> Dashboard
     API --> Monitor
@@ -78,7 +78,7 @@ graph TD
     classDef featureNode fill:#bfb,stroke:#3f3,stroke-width:2px;
     classDef modelNode fill:#fbb,stroke:#f33,stroke-width:2px;
     classDef deployNode fill:#ffb,stroke:#ff3,stroke-width:2px;
-    
+
     class MIMIC3,MIMIC4 sourceNode;
     class Ingest,Clean,Process processNode;
     class Demographics,Vitals,Labs,Meds,Procedures,Diagnoses,Temporal,Combine featureNode;

@@ -67,10 +67,10 @@ def test_function_name():
     """
     # Arrange
     input_data = ...
-    
+
     # Act
     result = function_to_test(input_data)
-    
+
     # Assert
     assert result == expected_result
 ```
