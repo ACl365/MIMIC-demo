@@ -100,3 +100,8 @@ venv.bak/
 !data/raw/README.md
 !data/processed/README.md
 !data/external/README.md
+
+# Files to ignore as requested
+IMPROVEMENTS.md
+IMPROVEMENTS_SUMMARY.md
+project_plan.txt

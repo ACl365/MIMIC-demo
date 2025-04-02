@@ -68,7 +68,33 @@ models:
     algorithms: ["linear_regression", "random_forest", "xgboost", "lightgbm"]
     cv_folds: 5
     hyperparameter_tuning: true
-    
+  temporal_readmission: # New section for the LSTM model
+    target: "readmission_30day" # Same target as standard readmission
+    model_class: "TemporalReadmissionModel" # Identifier for the class in model.py
+    # --- Feature Engineering Specifics for Temporal ---
+    sequence_features: # Define which features are sequential (vitals, labs)
+      - "vitals"
+      - "lab_values"
+    static_features: # Define which features are static (demographics, maybe initial diagnoses)
+      - "demographic"
+      # - "diagnoses" # Decide if initial diagnoses are static or part of sequence
+    sequence_length: 48 # Max sequence length (e.g., 48 hours of data points)
+    padding_value: 0.0 # Value used for padding sequences
+    # --- PyTorch Model Hyperparameters ---
+    hidden_dim: 64
+    time_embed_dim: 16
+    num_layers: 2
+    dropout: 0.2
+    # --- Training Hyperparameters ---
+    num_epochs: 20 # Adjust as needed
+    batch_size: 64 # Adjust based on memory
+    learning_rate: 0.001
+    optimizer: "Adam" # Options: Adam, RMSprop, etc.
+    loss_function: "BCEWithLogitsLoss" # Suitable for binary classification with logits output
+    class_weight: "balanced" # Or specify weights manually if needed
+    # Note: hyperparameter_tuning for PyTorch models often requires custom loops or libraries like Optuna/Ray Tune
+    hyperparameter_tuning: false # Set to false for now, requires separate implementation
+
 # Evaluation metrics
 evaluation:
   classification:
@@ -77,7 +103,7 @@ evaluation:
     threshold_optimization: true
   regression:
     metrics: ["rmse", "mae", "r2", "explained_variance"]
-    
+
 # Interpretability
 interpretability:
   shap:
@@ -88,7 +114,7 @@ interpretability:
     num_features: 10
   feature_importance:
     enabled: true
-    
+
 # Visualization
 visualization:
   plots:
@@ -100,13 +126,15 @@ visualization:
     - "calibration_curve"
     - "learning_curve"
   interactive: true
-  
+
 # API configuration
 api:
   host: "0.0.0.0"
   port: 8000
   debug: false
-  
+  model_path: "models/readmission_model.pkl" # Default to standard model
+  # To use the temporal model, change this to e.g., "models/temporal_readmission_model.pth"
+
 # Dashboard configuration
 dashboard:
   host: "0.0.0.0"

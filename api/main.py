@@ -1,196 +1,404 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-import uvicorn
 import os
 import sys
-import pickle
+from typing import Any, Dict, List, Optional, Union
+
+import numpy as np  # Added for SHAP
 import pandas as pd
-from typing import List, Optional, Dict, Any
+import shap  # Added for SHAP
+import uvicorn
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
-# Add src directory to Python path to import project modules
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-sys.path.insert(0, project_root)
+# Add src directory to Python path BEFORE importing project modules
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
-# Import project modules
-from src.utils.config import load_config
+# --- Project Module Imports ---
+# Moved imports here to be after sys.path modification
 from src.models.model import BaseModel as MimicBaseModel
+from src.utils import get_data_path
+from src.utils.config import load_config
+from src.utils.llm_utils import explain_shap_with_llm
+from src.utils.logger import get_logger
 
-# --- Global Variables for Loaded Model Components ---
-# These will be populated at startup
+# --- Global Variables ---
+logger = get_logger(__name__)  # Initialize logger for API
 model_data: Dict[str, Any] = {}
 model_instance: Optional[MimicBaseModel] = None
-expected_features: List[str] = []
+expected_features: Optional[Union[List[str], Dict[str, List[str]]]] = None
+shap_background_data: Optional[pd.DataFrame] = None
+config = {}  # Initialize as empty dict
 
-
+# --- FastAPI App ---
 app = FastAPI(
     title="MIMIC Readmission Predictor API",
-    description="API to predict 30-day hospital readmission risk using the MIMIC demo dataset.",
-    version="0.1.0"
+    description=(
+        "API to predict 30-day hospital readmission risk using the MIMIC demo dataset. "
+        "Optionally provides LLM-generated explanations based on SHAP values."
+    ),
+    version="0.1.1",
 )
 
-# --- Configuration and Model Loading ---
-config = None
-MODEL_PATH = "models/readmission_model.pkl"  # Path relative to project root
 
 # --- Startup Event Handler ---
 @app.on_event("startup")
-async def load_model_on_startup():
-    """Load the model, scaler, and feature names when the API starts."""
-    global model_data, model_instance, expected_features, config
+async def load_model_on_startup() -> None:
+    """Load model, scaler, features, and SHAP background data."""
+    global model_data, model_instance, expected_features, config, shap_background_data
+    logger.info("API startup: Loading resources...")
     try:
-        # Try to load config
+        # Load config
         try:
             config = load_config()
-            print("Configuration loaded successfully.")
+            logger.info("Configuration loaded successfully.")
         except Exception as config_e:
-            print(f"Warning: Configuration file not found or invalid: {config_e}. Using defaults.")
-            config = {} # Use empty dict if config fails
+            logger.warning(
+                f"Config file not found/invalid: {config_e}. Using defaults."
+            )
+            config = {}
 
-        # Construct absolute path for the model
-        model_abs_path = os.path.join(project_root, MODEL_PATH)
+        # Get model path from config
+        model_rel_path = config.get("api", {}).get(
+            "model_path", "models/readmission_model.pkl"
+        )
+        model_abs_path = os.path.join(project_root, model_rel_path)
+        logger.info(f"Attempting to load model from: {model_abs_path}")
 
         if not os.path.exists(model_abs_path):
-            print(f"CRITICAL ERROR: Model file not found at: {model_abs_path}")
-            # Keep globals empty/None, health check will fail
-            return
+            logger.critical(f"Model file not found at: {model_abs_path}")
+            raise FileNotFoundError(f"Model file not found: {model_abs_path}")
 
-        # Load the entire model object (which includes model, scaler, features)
+        # Load model instance using the class method
         model_instance = MimicBaseModel.load(model_abs_path)
+
+        # --- Validate loaded model ---
+        if not hasattr(model_instance, "model") or model_instance.model is None:
+            raise ValueError("Loaded instance missing 'model' attribute or it's None.")
+
+        # Validate attributes based on model type
+        if model_instance.model_type == "temporal_readmission":
+            if not hasattr(model_instance, "feature_names") or not isinstance(
+                model_instance.feature_names, dict
+            ):
+                raise TypeError("Temporal model 'feature_names' missing or not dict.")
+            if (
+                not hasattr(model_instance, "static_scaler")
+                or model_instance.static_scaler is None
+            ):
+                raise ValueError("Temporal model missing 'static_scaler' or it's None.")
+        else:  # Standard models
+            if not hasattr(model_instance, "feature_names") or not isinstance(
+                model_instance.feature_names, list
+            ):
+                raise TypeError("Standard model 'feature_names' missing or not list.")
+            if not hasattr(model_instance, "scaler") or model_instance.scaler is None:
+                raise ValueError("Standard model missing 'scaler' or it's None.")
+
+        # Store expected features
         expected_features = model_instance.feature_names
-        # Store components in model_data for potential direct access if needed
-        model_data['model'] = model_instance.model
-        model_data['scaler'] = model_instance.scaler
-        model_data['feature_names'] = model_instance.feature_names
 
-        print(f"Model loaded successfully from {model_abs_path}")
-        print(f"Model Type: {model_instance.model_type}")
-        print(f"Expected Features ({len(expected_features)}): {expected_features[:5]}...") # Print first 5
+        logger.info(f"Model loaded successfully from {model_abs_path}")
+        logger.info(f"Model Type: {model_instance.model_type}")
 
-    except FileNotFoundError as e:
-        print(f"CRITICAL ERROR: Model file or dependency not found during startup: {e}")
-    except KeyError as e:
-        print(f"CRITICAL ERROR: Missing expected key in model file ('model', 'scaler', or 'feature_names'): {e}")
+        # Log feature details
+        if isinstance(expected_features, dict):
+            f_static = expected_features.get("static", [])
+            f_seq = expected_features.get("sequence", [])
+            f_names_to_print = f_static[:5]
+            f_count = len(f_static) + len(f_seq)
+            f_type = "Static/Sequence"
+        elif isinstance(expected_features, list):
+            f_names_to_print = expected_features[:5]
+            f_count = len(expected_features)
+            f_type = "Flat"
+        else:
+            f_names_to_print = []
+            f_count = 0
+            f_type = "Unknown"
+        logger.info(
+            f"Expected Features ({f_count}, Type: {f_type}): {f_names_to_print}..."
+        )
+
+        # --- Prepare SHAP background data (for standard models) ---
+        if model_instance.model_type != "temporal_readmission" and isinstance(
+            expected_features, list
+        ):
+            logger.info("Preparing SHAP background data...")
+            try:
+                data_path = get_data_path("processed", "combined_features", config)
+                if not os.path.exists(data_path):
+                    logger.warning(
+                        f"Combined features file not found at {data_path}. "
+                        "Cannot create SHAP background data."
+                    )
+                else:
+                    full_data = pd.read_csv(data_path)
+                    X_processed, _ = model_instance.preprocess(
+                        full_data, for_prediction=True
+                    )
+                    X_processed = X_processed.reindex(
+                        columns=expected_features, fill_value=0
+                    )
+                    X_scaled = pd.DataFrame(
+                        model_instance.scaler.transform(X_processed),
+                        columns=expected_features,
+                    )
+                    sample_size = 100
+                    shap_background_data = shap.sample(
+                        X_scaled, min(sample_size, len(X_scaled)), random_state=42
+                    )
+                    logger.info(
+                        f"SHAP background data prepared with {len(shap_background_data)} samples."
+                    )
+            except Exception as shap_data_e:
+                logger.error(
+                    f"Failed to prepare SHAP background data: {shap_data_e}",
+                    exc_info=True,
+                )
+                shap_background_data = None
+        else:
+            logger.info(
+                "Skipping SHAP background data preparation for temporal model."
+            )
+
     except Exception as e:
-        print(f"CRITICAL ERROR: Failed to load model during startup: {e}")
+        logger.critical(f"CRITICAL ERROR during API startup: {e}", exc_info=True)
         # Reset globals to ensure health check fails clearly
         model_data = {}
         model_instance = None
-        expected_features = []
+        expected_features = None
+        shap_background_data = None
+
 
 @app.get("/")
-async def root():
+async def root() -> dict:
     """Root endpoint providing basic API information."""
     return {"message": "Welcome to the MIMIC Readmission Predictor API"}
 
+
 @app.get("/health", summary="Check API Health")
-async def health_check():
-    """Check if the API is running and the model is loaded."""
+async def health_check() -> dict:
     """Check if the API is running and the model components are loaded."""
-    if model_instance and expected_features and model_data.get('scaler') and model_data.get('model'):
+    scaler_ok = (
+        hasattr(model_instance, "scaler") and model_instance.scaler is not None
+    ) or (
+        hasattr(model_instance, "static_scaler")
+        and model_instance.static_scaler is not None
+    )
+
+    if (
+        model_instance
+        and hasattr(model_instance, "model")
+        and model_instance.model is not None
+        and scaler_ok
+        and expected_features is not None
+    ):
+        shap_status = "Not Applicable (Temporal Model)"
+        if model_instance.model_type != "temporal_readmission":
+            shap_status = "Loaded" if shap_background_data is not None else "Not Loaded"
+
+        feat_count = (
+            len(expected_features.get("static", []))
+            + len(expected_features.get("sequence", []))
+            if isinstance(expected_features, dict)
+            else len(expected_features)
+        )
+
         return {
             "status": "ok",
             "message": "API is running and model components are loaded.",
-            "model_type": model_instance.model_type,
-            "expected_features_count": len(expected_features)
+            "model_type": getattr(model_instance, "model_type", "Unknown"),
+            "expected_features_count": feat_count,
+            "shap_background_data_status": shap_status,
         }
     else:
         error_details = []
-        if not model_instance: error_details.append("Model instance not loaded.")
-        if not expected_features: error_details.append("Expected features list not loaded.")
-        if not model_data.get('scaler'): error_details.append("Scaler not loaded.")
-        if not model_data.get('model'): error_details.append("Base model not loaded.")
-        raise HTTPException(status_code=503,
-                           detail=f"API is unhealthy. Failed to load model components: {'; '.join(error_details)}")
+        if not model_instance:
+            error_details.append("Model instance not loaded.")
+        elif not hasattr(model_instance, "model") or model_instance.model is None:
+            error_details.append("Model attribute missing or None.")
+        elif not scaler_ok:
+            error_details.append(
+                "Scaler attribute (scaler/static_scaler) missing or None."
+            )
+        if not expected_features:
+            error_details.append("Expected features not loaded (None or empty).")
+        raise HTTPException(
+            status_code=503,
+            detail=f"API is unhealthy. Failed to load model components: {'; '.join(error_details)}",
+        )
+
 
 # --- Prediction Endpoint ---
-@app.post("/predict", summary="Predict 30-Day Readmission Risk")
-async def predict_readmission(patient_data: Dict[str, Any]):
-    """
-    Predicts the probability of 30-day hospital readmission based on patient features provided as a JSON object.
+class PatientFeatures(BaseModel):
+    # Placeholder for potential future input validation using Pydantic
+    pass
 
-    - **Input**: A JSON object where keys are feature names and values are the corresponding feature values.
-                 The API will attempt to match these features against the model's expected features. Missing features will be imputed with 0.
-    - **Output**: Predicted probability of readmission (float between 0 and 1).
+
+@app.post("/predict", summary="Predict 30-Day Readmission Risk")
+async def predict_readmission(
+    patient_data: Dict[str, Any],
+    explain: bool = False,  # Optional query parameter for explanation
+) -> dict:
     """
-    if not model_instance or not expected_features:
-        raise HTTPException(status_code=503, detail="Model not loaded properly. Cannot make predictions. Check API health.")
+    Predicts the probability of 30-day hospital readmission.
+
+    - **Input**: JSON object with patient features.
+    - **Query Parameter**: `explain=true` for LLM explanation (adds latency).
+    - **Output**: JSON with probability and optional explanation.
+    """
+    # Re-check model load status
+    scaler_ok = (
+        hasattr(model_instance, "scaler") and model_instance.scaler is not None
+    ) or (
+        hasattr(model_instance, "static_scaler")
+        and model_instance.static_scaler is not None
+    )
+    if (
+        not model_instance
+        or not hasattr(model_instance, "model")
+        or model_instance.model is None
+        or not scaler_ok
+        or expected_features is None
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="Model not loaded properly. Check API health.",
+        )
+
+    explanation_text: Optional[str] = None
 
     try:
-        # 1. Validate Input Data Structure
+        # Validate Input
         if not isinstance(patient_data, dict):
-             raise HTTPException(status_code=400, detail="Invalid input format. Expected a JSON object (dictionary).")
+            raise HTTPException(
+                status_code=400, detail="Invalid input: Expected JSON object."
+            )
 
-        # 2. Prepare DataFrame with expected features
-        # Create a DataFrame from the input dict
         input_df_raw = pd.DataFrame([patient_data])
 
-        # Check for unexpected features provided by the user
-        provided_features = set(input_df_raw.columns)
-        model_feature_set = set(expected_features)
-        unexpected_features = provided_features - model_feature_set
-        if unexpected_features:
-            print(f"Warning: Received unexpected features, ignoring: {list(unexpected_features)}")
-            # Optionally, raise an error if strict matching is required:
-            # raise HTTPException(status_code=400, detail=f"Received unexpected features: {list(unexpected_features)}")
+        # Prepare features based on model type
+        scaled_features = None
+        if model_instance.model_type == "temporal_readmission":
+            input_df = input_df_raw
+            logger.debug("Using Temporal model predict (internal preprocessing).")
+        else:
+            logger.debug("Using standard model predict (manual preprocessing/scaling).")
+            standard_features = expected_features
+            try:
+                if input_df_raw.empty and not standard_features:
+                    input_df = pd.DataFrame(columns=standard_features)
+                elif input_df_raw.empty:
+                    input_df = pd.DataFrame(
+                        [[0] * len(standard_features)], columns=standard_features
+                    )
+                else:
+                    input_df = input_df_raw.reindex(
+                        columns=standard_features, fill_value=0
+                    )
+            except Exception as reindex_e:
+                logger.error(f"Reindexing error: {reindex_e}", exc_info=True)
+                raise HTTPException(status_code=500, detail="Data preparation error.")
 
-        # Reindex to ensure all expected columns are present, in the correct order,
-        # filling missing features with 0 (consistent with previous logic).
+            # Scale standard features
+            try:
+                if not hasattr(model_instance, "scaler") or model_instance.scaler is None:
+                    raise ValueError("Standard scaler not found/fitted.")
+                scaled_features = model_instance.scaler.transform(input_df)
+            except Exception as scale_e:
+                logger.error(f"Scaling error: {scale_e}", exc_info=True)
+                raise HTTPException(status_code=400, detail="Data scaling error.")
+
+        # Make Prediction
         try:
-            input_df = input_df_raw.reindex(columns=expected_features, fill_value=0)
-        except Exception as reindex_e:
-             # This might happen with very unusual column names, though unlikely
-             print(f"Error during DataFrame reindexing: {reindex_e}")
-             raise HTTPException(status_code=500, detail=f"Internal server error during data preparation (reindexing).")
-
-
-        # 3. Perform Scaling
-        try:
-            scaled_features = model_instance.scaler.transform(input_df)
-        except ValueError as scale_e:
-             # This might happen if data types are wrong after reindexing/filling
-             print(f"Error during scaling: {scale_e}")
-             raise HTTPException(status_code=400, detail=f"Data scaling error. Check input data types. Details: {scale_e}")
-        except Exception as scale_e:
-             print(f"Unexpected error during scaling: {scale_e}")
-             raise HTTPException(status_code=500, detail=f"Internal server error during data scaling.")
-
-        # 4. Make Prediction
-        try:
-            prediction_proba = model_instance.model.predict_proba(scaled_features)
-            # Assuming binary classification, get probability of the positive class (index 1)
-            readmission_probability = prediction_proba[0, 1]
-        except AttributeError as predict_e:
-             print(f"Error calling predict_proba (model structure issue?): {predict_e}")
-             raise HTTPException(status_code=500, detail="Internal server error: Model prediction method not found.")
+            if model_instance.model_type == "temporal_readmission":
+                prediction_result = model_instance.predict(input_df)
+                if isinstance(prediction_result, np.ndarray) and prediction_result.size > 0:
+                    readmission_probability = prediction_result.item(0)
+                else:
+                    raise ValueError("Temporal prediction gave unexpected result.")
+            else:
+                if not hasattr(model_instance.model, "predict_proba"):
+                    raise AttributeError("Model missing 'predict_proba'.")
+                prediction_proba = model_instance.model.predict_proba(scaled_features)
+                readmission_probability = prediction_proba[0, 1]
         except Exception as predict_e:
-             print(f"Unexpected error during prediction: {predict_e}")
-             raise HTTPException(status_code=500, detail="Internal server error during prediction.")
+            logger.error(f"Prediction error: {predict_e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Prediction execution error.")
 
-        # 5. Format and return the prediction
-        return {"predicted_readmission_probability": float(readmission_probability)}
+        # Generate Explanation (Optional)
+        if explain:
+            logger.info("Explanation requested.")
+            if model_instance.model_type == "temporal_readmission":
+                explanation_text = "Explanation not available for temporal models."
+                logger.warning(explanation_text)
+            elif shap_background_data is None:
+                explanation_text = "Explanation unavailable (missing background data)."
+                logger.warning(explanation_text)
+            elif scaled_features is None:
+                explanation_text = "Explanation unavailable (scaling error)."
+                logger.error(explanation_text)
+            else:
+                try:
+                    # Define predict function for SHAP
+                    def predict_fn_shap(X_np):
+                        if hasattr(model_instance.model, "predict_proba"):
+                            proba = model_instance.model.predict_proba(X_np)
+                            return proba[:, 1]
+                        else:
+                            return model_instance.model.predict(X_np)
 
-    except FileNotFoundError as e:
-        # Catch specific exceptions from above, plus general ones
-        raise HTTPException(status_code=500, detail=f"Model file or essential component not found: {e}")
-    except KeyError as e:
-        # This might occur if the input dict processing fails unexpectedly
-        print(f"Internal key error during processing: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal server error processing input features: {e}")
-    except ValueError as e:
-        # More specific ValueErrors are caught above, this is a fallback
-        print(f"Generic ValueError during prediction: {e}")
-        raise HTTPException(status_code=400, detail=f"Invalid input data value or type: {e}")
+                    explainer = shap.KernelExplainer(
+                        predict_fn_shap, shap_background_data.values
+                    )
+                    shap_values_single = explainer.shap_values(
+                        scaled_features[0, :].reshape(1, -1)
+                    )
+                    if isinstance(shap_values_single, list): # Handle multi-output
+                        shap_values_single = shap_values_single[1]
+                    shap_values_single = shap_values_single.flatten()
+
+                    # Call LLM helper
+                    explanation_text = explain_shap_with_llm(
+                        shap_values_single=shap_values_single,
+                        feature_names=expected_features, # Standard models use list
+                        prediction_prob=readmission_probability,
+                        top_n=3,
+                    )
+                    if explanation_text is None:
+                        explanation_text = "Failed to generate LLM explanation."
+
+                except Exception as shap_err:
+                    logger.error(f"SHAP explanation error: {shap_err}", exc_info=True)
+                    explanation_text = "Error generating explanation."
+
+        # Format and return response
+        response_data = {
+            "predicted_readmission_probability": float(readmission_probability)
+        }
+        if explain:
+            response_data["explanation"] = explanation_text
+
+        return response_data
+
+    except HTTPException as http_e:
+        raise http_e
     except Exception as e:
-        # Catch-all for unexpected errors
-        print(f"Unexpected prediction error: {type(e).__name__} - {e}")
-        # Consider logging traceback here: import traceback; traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"An unexpected internal server error occurred.")
+        logger.error(f"Unexpected prediction endpoint error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error.")
 
 
 if __name__ == "__main__":
-    # Run the API using Uvicorn - Get host/port from config if available
-    # Use loaded config (or default if loading failed)
-    api_host = config.get('api', {}).get('host', '127.0.0.1') # Default to localhost for safety
-    api_port = config.get('api', {}).get('port', 8001) # Default to 8001
-    print(f"Starting API server on {api_host}:{api_port}")
-    uvicorn.run(app, host=api_host, port=api_port)
+    # Run the API using Uvicorn
+    if not config: # Load config if startup didn't run (e.g., direct execution)
+        try:
+            config = load_config()
+        except Exception:
+            config = {}
+
+    api_host = config.get("api", {}).get("host", "127.0.0.1")
+    api_port = config.get("api", {}).get("port", 8001)
+    logger.info(f"Starting API server on http://{api_host}:{api_port}")
+    # Use reload=True for development convenience
+    uvicorn.run("main:app", host=api_host, port=api_port, reload=True)
