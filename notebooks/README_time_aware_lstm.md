@@ -33,18 +33,18 @@ The `time_aware_lstm.py` script implements a time-aware LSTM model that explicit
    - Create synthetic temporal sequences with time intervals
    - Train the time-aware LSTM model
    - Train a baseline LightGBM model for comparison
-   - Visualize the results and save plots to the results directory
-   - Analyze the attention weights to identify important time points
+   - Visualise the results and save plots to the results directory
+   - Analyse the attention weights to identify important time points
 
 ## Results
 
-The script generates several visualizations:
+The script generates several visualisations:
 
 1. **Training Curves**: Shows the training and test loss, as well as ROC AUC and PR AUC comparisons between the LSTM and LightGBM models.
 
 2. **ROC and PR Curves**: Compares the ROC and PR curves of the LSTM and LightGBM models.
 
-3. **Attention Analysis**: Visualizes the attention weights over time, along with the corresponding vital signs and lab values, to identify which time points were most important for the prediction.
+3. **Attention Analysis**: Visualises the attention weights over time, along with the corresponding vital signs and lab values, to identify which time points were most important for the prediction.
 
 ## Advantages of Time-Aware Temporal Modeling
 
@@ -72,6 +72,6 @@ The ability to identify specific time points that are predictive of readmission 
 
 1. Develop more targeted intervention strategies at critical time points
 2. Better understand the temporal progression of risk factors
-3. Create more personalized discharge planning based on individual temporal patterns
+3. Create more personalised discharge planning based on individual temporal patterns
 
 This enhanced temporal modeling approach represents a significant step forward from traditional static models, moving us closer to truly understanding the dynamic nature of patient health trajectories.

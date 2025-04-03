@@ -90,7 +90,7 @@ Alternatively, you can run the analysis interactively using the Jupyter notebook
 jupyter notebook notebooks/imbalance_analysis.ipynb
 ```
 
-The notebook provides a more interactive experience with visualizations and detailed explanations.
+The notebook provides a more interactive experience with visualisations and detailed explanations.
 
 ## Expected Outputs
 
@@ -111,9 +111,9 @@ Class weights adjust the importance of each class during training, which can hel
 
 Random oversampling duplicates existing minority samples, which can lead to overfitting as the model sees the exact same minority samples multiple times.
 
-SMOTE creates synthetic examples by interpolating between existing minority samples, which can help the model generalize better by learning from a more diverse set of minority class examples.
+SMOTE creates synthetic examples by interpolating between existing minority samples, which can help the model generalise better by learning from a more diverse set of minority class examples.
 
-SMOTE may perform differently than random oversampling because it creates new, synthetic samples rather than just duplicating existing ones, potentially leading to better generalization but possibly introducing noise if the synthetic samples are not representative of the true data distribution.
+SMOTE may perform differently than random oversampling because it creates new, synthetic samples rather than just duplicating existing ones, potentially leading to better generalisation but possibly introducing noise if the synthetic samples are not representative of the true data distribution.
 
 ### Oversampling vs. Undersampling
 
@@ -125,7 +125,7 @@ Undersampling reduces the number of majority class samples, which can lead to in
 
 It's important to note the limitations of this analysis:
 
-1. **Small Dataset Size**: With only ~200 demo patients, the absolute performance metrics may be unstable and not generalizable. The relative differences between techniques are more informative than the absolute values.
+1. **Small Dataset Size**: With only ~200 demo patients, the absolute performance metrics may be unstable and not generalisable. The relative differences between techniques are more informative than the absolute values.
 
 2. **Cross-validation Stability**: Even with cross-validation, the small dataset size means that the results may vary significantly depending on the random splits.
 
@@ -139,4 +139,4 @@ For a more comprehensive analysis, consider:
 2. Exploring combinations of techniques (e.g., SMOTE + class weights)
 3. Trying different base classifiers (e.g., random forest, XGBoost)
 4. Implementing more advanced techniques like ADASYN, SMOTETomek, or SMOTEENN
-5. Exploring threshold optimization for each technique
+5. Exploring threshold optimisation for each technique

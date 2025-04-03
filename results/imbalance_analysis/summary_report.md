@@ -45,9 +45,9 @@
 Class weights adjust the importance of each class during training, which helps the model pay more attention to the minority class without changing the data. In our analysis, this dramatically improved recall from 0 to 0.816, demonstrating how effective this simple technique can be for imbalanced datasets.
 
 ### Random Oversampling vs. SMOTE
-Random oversampling duplicates existing minority samples, which can lead to overfitting as the model sees the exact same minority samples multiple times. SMOTE creates synthetic examples by interpolating between existing minority samples, which helps the model generalize better by learning from a more diverse set of minority class examples.
+Random oversampling duplicates existing minority samples, which can lead to overfitting as the model sees the exact same minority samples multiple times. SMOTE creates synthetic examples by interpolating between existing minority samples, which helps the model generalise better by learning from a more diverse set of minority class examples.
 
-The results clearly show this difference: SMOTE achieved significantly better precision and F1 score, indicating better generalization, even though random oversampling had slightly higher recall. This suggests that SMOTE's synthetic samples helped the model learn more robust decision boundaries rather than just memorizing the duplicated samples.
+The results clearly show this difference: SMOTE achieved significantly better precision and F1 score, indicating better generalisation, even though random oversampling had slightly higher recall. This suggests that SMOTE's synthetic samples helped the model learn more robust decision boundaries rather than just memorising the duplicated samples.
 
 ### Oversampling vs. Undersampling
 Oversampling techniques (Random Oversampling, SMOTE) increase the number of minority class samples to balance the classes, preserving all available information. Undersampling reduces the number of majority class samples, which can lead to information loss.
@@ -60,7 +60,7 @@ It's important to note the limitations of this analysis:
 
 1. **Data Restructuring**: The original analysis was performed on data where each row represented a clinical measurement rather than a unique hospital admission. The code has been updated to restructure the data correctly, but the performance metrics may differ from the original analysis.
 
-2. **Small Dataset Size**: With only 200 unique patients and 404 hospital admissions in the MIMIC-III demo dataset, the absolute performance metrics may be unstable and not generalizable. The relative differences between techniques are more informative than the absolute values.
+2. **Small Dataset Size**: With only 200 unique patients and 404 hospital admissions in the MIMIC-III demo dataset, the absolute performance metrics may be unstable and not generalisable. The relative differences between techniques are more informative than the absolute values.
 
 3. **Cross-validation Stability**: Even with cross-validation, the small dataset size means that the results may vary significantly depending on the random splits.
 
@@ -78,4 +78,4 @@ Based on this analysis, we recommend:
 
 4. **Validate on larger dataset**: When the full MIMIC dataset becomes available, validate these findings on a larger, more representative sample.
 
-5. **Explore threshold optimization**: Adjust the classification threshold to further optimise the precision-recall trade-off based on specific clinical requirements.
+5. **Explore threshold optimisation**: Adjust the classification threshold to further optimise the precision-recall trade-off based on specific clinical requirements.

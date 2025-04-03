@@ -11,8 +11,8 @@ While our current models (Logistic Regression, Random Forest, XGBoost, LightGBM,
 3.  **Feature Engineering Dependency**: Current approaches rely heavily on manual feature engineering (`src/features/feature_extractors.py`), which is time-consuming, requires deep domain expertise, and might not capture all latent patterns.
 4.  **Limited Contextual Understanding**: Standard models don't inherently model the complex interplay between diagnoses, procedures, medications, and evolving patient state.
 5.  **Difficulty with Irregular Sampling**: Healthcare data is inherently asynchronous. While aggregation helps, sequence models can handle this more naturally.
-6.  **Correlation vs. Causation**: Current models identify correlations, but understanding the *causal* impact of interventions or risk factors requires specialized techniques.
-7.  **Interpretability Nuances**: While SHAP provides feature importance (`src/visualization/generate_shap_plots.py`), explaining *temporal* contributions or complex interactions requires more advanced methods.
+6.  **Correlation vs. Causation**: Current models identify correlations, but understanding the *causal* impact of interventions or risk factors requires specialised techniques.
+7.  **Interpretability Nuances**: While SHAP provides feature importance (`src/visualisation/generate_shap_plots.py`), explaining *temporal* contributions or complex interactions requires more advanced methods.
 
 ## Advanced Techniques for Future Implementation
 
@@ -41,7 +41,7 @@ Moving beyond static features to model the patient journey over time.
 #### Temporal Convolutional Networks (TCNs)
 
 *   **Concept:** Use causal convolutions with dilations to capture temporal patterns at different scales.
-*   **Advantages:** Stable training, parallelizable computation, potentially long effective history size.
+*   **Advantages:** Stable training, parallelisable computation, potentially long effective history size.
 *   **Relevance:** Addresses limitations #1, #2. Alternative to RNNs/Transformers.
 *   **Implementation:** Requires careful padding and network design. Libraries like `pytorch-tcn` can simplify implementation.
 
@@ -65,7 +65,7 @@ Moving beyond static features to model the patient journey over time.
 #### Causal Forests
 
 *   **Concept:** An extension of Random Forests designed to estimate heterogeneous treatment effects (HTE) – how effects vary across different patient subgroups.
-*   **Application:** Identify patient subgroups (e.g., based on age, specific comorbidities) who benefit *most* or *least* from a particular intervention regarding readmission risk. Allows for personalized intervention strategies.
+*   **Application:** Identify patient subgroups (e.g., based on age, specific comorbidities) who benefit *most* or *least* from a particular intervention regarding readmission risk. Allows for personalised intervention strategies.
 
 #### Targeted Maximum Likelihood Estimation (TMLE)
 
@@ -100,7 +100,7 @@ Strengthening the pipeline for robustness, scalability, and continuous improveme
 #### Comprehensive Experiment Tracking (MLflow)
 
 *   **Concept:** Systematically log parameters, code versions, metrics, datasets (hashes/versions), model artifacts (including plots like confusion matrices, SHAP plots), and environment details for every experiment run using MLflow.
-*   **Implementation:** Integrate MLflow logging deeply into training scripts (`src/models/model.py`, `src/models/imbalance_analysis.py`), CI/CD pipelines, and hyperparameter tuning processes. Utilize MLflow Projects for reproducibility. Store artifacts in a robust backend (e.g., S3, Azure Blob Storage).
+*   **Implementation:** Integrate MLflow logging deeply into training scripts (`src/models/model.py`, `src/models/imbalance_analysis.py`), CI/CD pipelines, and hyperparameter tuning processes. Utilise MLflow Projects for reproducibility. Store artifacts in a robust backend (e.g., S3, Azure Blob Storage).
 
 [Conceptual Python Code Block Removed - MLflow Logging Example]
 
@@ -113,19 +113,19 @@ Strengthening the pipeline for robustness, scalability, and continuous improveme
     *   **Integration Tests:** Test interactions between components (e.g., data processing -> feature engineering).
     *   **Data Validation:** Run checks (e.g., Great Expectations) on sample or incoming data.
     *   **Model Training & Evaluation:** Trigger training scripts, log results to MLflow.
-    *   **Fairness & Bias Checks:** Run fairness analysis scripts (`src/visualization/generate_fairness_plots.py`) against predefined thresholds.
+    *   **Fairness & Bias Checks:** Run fairness analysis scripts (`src/visualisation/generate_fairness_plots.py`) against predefined thresholds.
     *   **Model Versioning/Registration:** Push validated models to MLflow Model Registry or similar.
     *   **(Optional) Deployment:** Trigger deployment to staging/production API/dashboard environments after validation.
 
 #### Advanced Monitoring
 
 *   **Data/Concept Drift:** Implement robust statistical tests (PSI, KS-test, Chi-squared) comparing training/reference data distributions with live prediction input data. Monitor model output distribution drift. Track performance metrics on recent data slices. Use tools like Evidently AI, NannyML, or custom implementations feeding into monitoring dashboards (Grafana).
-*   **Operational Monitoring:** Track API latency, error rates, resource utilization (CPU/GPU/Memory) using standard infrastructure monitoring tools.
+*   **Operational Monitoring:** Track API latency, error rates, resource utilisation (CPU/GPU/Memory) using standard infrastructure monitoring tools.
 *   **Alerting:** Set up automated alerts (e.g., via PagerDuty, Slack) for significant drift detection, performance degradation, or operational issues.
 
 #### Scalable Deployment Strategies
 
-*   **Containerization:** Package the API (`api/`) and potentially the dashboard (`dashboard/`) using Docker for consistent deployment.
+*   **Containerisation:** Package the API (`api/`) and potentially the dashboard (`dashboard/`) using Docker for consistent deployment.
 *   **Infrastructure:** Deploy containers using scalable solutions like Kubernetes (EKS, GKE, AKS) or serverless platforms (AWS Lambda + API Gateway, Google Cloud Run) for the API. Deploy the dashboard using appropriate services (e.g., Streamlit Cloud, Heroku, container orchestration).
 *   **Deployment Patterns:** Implement strategies like Blue/Green or Canary deployments for safe rollouts of new model versions with minimal downtime and risk.
 

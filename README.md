@@ -13,13 +13,13 @@ This project serves as a **Strategic Proof-of-Concept (PoC)** demonstrating a ro
 
 ## Project Goal: Demonstrating Production Readiness
 
-This project utilizes the MIMIC-III *Demo* dataset. While this subset limits the statistical power and generalizability of the specific model results, the **primary objective is to showcase a comprehensive, end-to-end MLOps pipeline built with best practices for reliability, reproducibility, and scalability.**
+This project utilises the MIMIC-III *Demo* dataset. While this subset limits the statistical power and generalisability of the specific model results, the **primary objective is to showcase a comprehensive, end-to-end MLOps pipeline built with best practices for reliability, reproducibility, and scalability.**
 
 The focus is on demonstrating:
 *   **Software Engineering Rigor:** Clean, modular code (`src/`), comprehensive testing (`tests/`), configuration management (`configs/`), logging (`src/utils/logger.py`), and dependency management (`requirements.txt`).
 *   **Advanced Data Handling:** Robust ETL, feature engineering for complex clinical data (`src/features/`), and strategies for handling imbalance (`src/models/imbalance_analysis.py`).
 *   **Modern AI Techniques:** Exploration and implementation of temporal models (LSTM PoC), interpretability methods (SHAP), and fairness analysis. Conceptual frameworks for causal inference and generative AI are outlined in [FUTURE_WORK.md](FUTURE_WORK.md).
-*   **End-to-End MLOps:** Automated CI/CD (GitHub Actions conceptual example), experiment tracking (MLflow conceptual integration), model monitoring principles, containerization (Docker), and deployment patterns (API via FastAPI, Dashboard via Streamlit).
+*   **End-to-End MLOps:** Automated CI/CD (GitHub Actions conceptual example), experiment tracking (MLflow conceptual integration), model monitoring principles, containerisation (Docker), and deployment patterns (API via FastAPI, Dashboard via Streamlit).
 
 **The methodology and pipeline architecture are designed to scale effectively to the full MIMIC dataset and real-world EHR systems.**
 
@@ -31,14 +31,14 @@ This section clarifies the current implementation status of different components
     *   **Core Data Pipeline:** Data loading, preprocessing, feature engineering (`src/data/`, `src/features/`).
     *   **Imbalance Analysis:** Implementation and comparison of techniques like SMOTE, Class Weights, Oversampling/Undersampling (`src/models/imbalance_analysis.py`).
     *   **Basic Model Training:** Logistic Regression pipeline training (`src/models/imbalance_analysis.py`).
-    *   **Interpretability:** Basic SHAP plots generation (`src/visualization/generate_shap_plots.py`).
-    *   **Fairness Analysis:** Basic fairness plots generation (e.g., recall by gender) (`src/visualization/generate_fairness_plots.py`).
+    *   **Interpretability:** Basic SHAP plots generation (`src/visualisation/generate_shap_plots.py`).
+    *   **Fairness Analysis:** Basic fairness plots generation (e.g., recall by gender) (`src/visualisation/generate_fairness_plots.py`).
     *   **API:** Functional FastAPI endpoint for predictions (`api/`).
-    *   **Dashboard:** Functional Streamlit dashboard for visualization (`dashboard/`).
+    *   **Dashboard:** Functional Streamlit dashboard for visualisation (`dashboard/`).
     *   **LSTM PoC:** Initial Time-Aware LSTM proof-of-concept developed in a notebook (`notebooks/advanced_temporal_model_poc.ipynb`).
 
 *   **Conceptual / Future Work (Not Fully Implemented):**
-    *   **Advanced Temporal Models:** Full integration and productionization of LSTM or other sequence models.
+    *   **Advanced Temporal Models:** Full integration and productionisation of LSTM or other sequence models.
     *   **Causal Inference:** Implementation of techniques outlined in [FUTURE_WORK.md](FUTURE_WORK.md).
     *   **Full CI/CD Automation:** Production-grade GitHub Actions workflows beyond basic linting/testing (e.g., automated deployment, model registry integration).
     *   **Advanced Monitoring:** Implementation of data/concept drift detection, performance monitoring dashboards (e.g., using tools like Evidently AI).
@@ -47,7 +47,7 @@ This section clarifies the current implementation status of different components
     *   **LLM Integration:** Implementation of LLM-based feature extraction or explanation generation.
     *   **Scalability Testing:** Performance testing on the full MIMIC dataset.
 
-## Key Features & Visualizations
+## Key Features & Visualisations
 
 *(Note: Plots generated using the MIMIC-III Demo dataset)*
 
@@ -61,15 +61,15 @@ Investigated various techniques to address the significant class imbalance in re
 | *Precision-Recall curves showing performance trade-offs.* | *Comparison of Precision, Recall, F1, PR AUC across techniques.* |
 
 ### 2. Model Interpretability (SHAP)
-Utilized SHAP to understand feature contributions to model predictions for the 'Class Weights' Logistic Regression model.
-*(See `src/visualization/generate_shap_plots.py`)*
+Utilised SHAP to understand feature contributions to model predictions for the 'Class Weights' Logistic Regression model.
+*(See `src/visualisation/generate_shap_plots.py`)*
 
 ![SHAP Summary Plot](assets/shap_summary_plot.png)
 *SHAP summary plot (beeswarm) showing feature impact on individual predictions.*
 
 ### 3. Fairness Analysis
 Assessed model performance disparities across demographic groups (e.g., gender) using the recall metric.
-*(See `src/visualization/generate_fairness_plots.py`)*
+*(See `src/visualisation/generate_fairness_plots.py`)*
 
 ![Fairness Plot (Recall by Gender)](assets/fairness_recall_gender.png)
 *Comparison of recall scores for Female (f) and Male (m) groups.*
@@ -87,14 +87,14 @@ This project implements a robust MLOps pipeline encompassing:
 
 *   **CI/CD:** Automated testing (linting, unit tests, integration tests), data validation, model evaluation, fairness checks, and model registration using GitHub Actions (conceptual workflow in [FUTURE_WORK.md](FUTURE_WORK.md)).
 *   **Experiment Tracking:** Comprehensive logging of parameters, metrics, artifacts (plots, models), code versions, and data versions using MLflow principles (conceptual integration outlined in [FUTURE_WORK.md](FUTURE_WORK.md)).
-*   **Monitoring:** Strategies for detecting data drift (PSI, KS-tests), concept drift (performance degradation), and operational issues, potentially visualized via Grafana or specialized tools.
+*   **Monitoring:** Strategies for detecting data drift (PSI, KS-tests), concept drift (performance degradation), and operational issues, potentially visualised via Grafana or specialised tools.
 *   **Deployment:** Containerized API (FastAPI) and Dashboard (Streamlit) for serving predictions and insights. Scalable deployment patterns (Blue/Green, Canary) considered for production.
 *   **Data & Model Versioning:** Using DVC (conceptual) and MLflow Model Registry for reproducibility and tracking lineage.
 
 ## Ethical Considerations & Bias Mitigation
 
 A framework for responsible AI development is crucial:
-*   **Fairness Assessment:** Analyzing model performance across sensitive attributes (e.g., gender, ethnicity) as demonstrated (`src/visualization/generate_fairness_plots.py`).
+*   **Fairness Assessment:** Analysing model performance across sensitive attributes (e.g., gender, ethnicity) as demonstrated (`src/visualisation/generate_fairness_plots.py`).
 *   **Transparency:** Using interpretability techniques like SHAP and Feature Importance (`assets/feature_coefficients_class_weights.png`).
 *   **Bias Mitigation:** Exploring pre-processing, in-processing, and post-processing techniques (future work).
 *   **Documentation:** Maintaining clear documentation on ethical considerations ([docs/ethical_considerations.md](docs/ethical_considerations.md)).
@@ -113,7 +113,7 @@ mimic-readmission-predictor/
 │   ├── data/                # Data processing scripts (make_dataset.py)
 │   ├── features/            # Feature engineering (build_features.py, feature_extractors.py)
 │   ├── models/              # Model implementations (model.py, imbalance_analysis.py)
-│   ├── visualization/       # Visualization scripts (generate_shap_plots.py, etc.)
+│   ├── visualisation/       # Visualisation scripts (generate_shap_plots.py, etc.)
 │   └── utils/               # Utility functions (logger.py, config.py)
 ├── tests/                   # Unit and integration tests
 ├── dashboard/               # Streamlit dashboard implementation
@@ -167,11 +167,11 @@ mimic-readmission-predictor/
     ```
 4.  **Generate SHAP Plot:** (Requires pipeline from step 3)
     ```bash
-    python -m src.visualization.generate_shap_plots --pipeline-path models/imbalance_pipeline_class_weights.pkl
+    python -m src.visualisation.generate_shap_plots --pipeline-path models/imbalance_pipeline_class_weights.pkl
     ```
 5.  **Generate Fairness Plot:** (Requires pipeline from step 3)
     ```bash
-    python -m src.visualization.generate_fairness_plots --pipeline-path models/imbalance_pipeline_class_weights.pkl --sensitive-attribute gender
+    python -m src.visualisation.generate_fairness_plots --pipeline-path models/imbalance_pipeline_class_weights.pkl --sensitive-attribute gender
     ```
 6.  **(Optional) Train a Specific Model:** (Example - trains default model specified in config)
     ```bash
@@ -198,7 +198,7 @@ mimic-readmission-predictor/
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Acknowledgments
+## Acknowledgements
 
 *   MIMIC-III dataset creators and maintainers.
 *   PhysioNet for providing access to the datasets.

@@ -52,10 +52,10 @@ To ensure we can measure the actual impact of the model after deployment, we wil
 - Length of stay for index admissions
 
 **Operational KPIs:**
-- Model utilization rate (% of eligible patients assessed)
+- Model utilisation rate (% of eligible patients assessed)
 - Time from admission to risk score generation
 - Intervention implementation rate for high-risk patients
-- Resource utilization for preventive interventions
+- Resource utilisation for preventive interventions
 
 **Financial KPIs:**
 - Cost per prevented readmission
@@ -97,12 +97,12 @@ Integrating the prediction model into existing Electronic Health Record (EHR) sy
 1. **Technical Integration**: Developing secure APIs for real-time data exchange between the prediction system and EHR
 2. **Alert Fatigue**: Designing an alert system that provides actionable information without overwhelming clinicians
 3. **Workflow Disruption**: Ensuring the system enhances rather than disrupts existing clinical workflows
-4. **Data Standardization**: Handling variations in data formats and coding systems across different EHR implementations
+4. **Data Standardisation**: Handling variations in data formats and coding systems across different EHR implementations
 5. **Regulatory Compliance**: Meeting DATA PROTECTION ACT, HITECH, and other regulatory requirements for patient data
 
 ### Proposed Solutions
 
-1. **FHIR-Based Integration**: Utilize the Fast Healthcare Interoperability Resources (FHIR) standard for seamless data exchange
+1. **FHIR-Based Integration**: Utilise the Fast Healthcare Interoperability Resources (FHIR) standard for seamless data exchange
 2. **Risk-Tiered Alerting**: Implement a tiered alert system that only notifies clinicians of moderate to high-risk patients
 3. **EHR-Embedded Dashboard**: Integrate the risk prediction directly into the EHR interface rather than as a separate system
 4. **Automated Documentation**: Generate discharge planning notes based on risk assessment to reduce documentation burden
@@ -136,7 +136,7 @@ We will implement a comprehensive bias detection and mitigation strategy:
 As a healthcare AI application, our system must maintain the highest standards for privacy and security:
 
 1. **DATA PROTECTION ACT Compliance**: All data storage and processing will adhere to DATA PROTECTION ACT requirements
-2. **Data Minimization**: Only collect and process data necessary for the prediction task
+2. **Data Minimisation**: Only collect and process data necessary for the prediction task
 3. **Secure API Design**: Implement OAuth 2.0 and proper authentication for all API endpoints
 4. **Audit Logging**: Maintain comprehensive logs of all data access and model predictions
 5. **De-identification**: Use k-anonymity and differential privacy techniques where appropriate
@@ -155,16 +155,16 @@ Different stakeholders require different communication approaches about the read
 - Example: "This system identifies 85% of high-risk patients while reducing false alerts by 40%, saving you time while improving patient outcomes."
 
 #### For Hospital Administrators
-- Focus on: ROI, resource optimization, quality metrics, regulatory compliance
+- Focus on: ROI, resource optimisation, quality metrics, regulatory compliance
 - Format: Executive summaries, financial projections, benchmark comparisons
 - Key metrics: Cost savings, readmission rate reduction, staff efficiency, length of stay
 - Example: "Implementation reduces readmissions by 15%, saving $5.2M annually with a 10:1 ROI while improving CMS quality metrics."
 
 #### For Patients
-- Focus on: Personalized care, improved outcomes, privacy protections
+- Focus on: Personalised care, improved outcomes, privacy protections
 - Format: Simple explanations, visual risk indicators, action-oriented recommendations
 - Key metrics: Personal risk factors, intervention benefits, follow-up requirements
-- Example: "Your care team is using advanced tools to create a personalized care plan that reduces your chance of needing to return to the hospital."
+- Example: "Your care team is using advanced tools to create a personalised care plan that reduces your chance of needing to return to the hospital."
 
 #### For Technical Teams
 - Focus on: System architecture, data requirements, integration points, monitoring
@@ -188,7 +188,7 @@ The MIMIC Readmission Prediction System leverages advanced analytics to identify
 **Implementation Timeline:**
 - Phase 1 (3 months): System development and integration
 - Phase 2 (2 months): Pilot implementation in Medicine and Cardiology
-- Phase 3 (4 months): Hospital-wide deployment and optimization
+- Phase 3 (4 months): Hospital-wide deployment and optimisation
 - Phase 4 (ongoing): Continuous monitoring and improvement
 
 **Investment Required:**
@@ -216,7 +216,7 @@ The successful implementation of the readmission prediction system requires a st
 
 ### Cross-Functional Collaboration Model
 
-The project will utilize a matrix-based collaboration model with the following teams:
+The project will utilise a matrix-based collaboration model with the following teams:
 
 1. **Clinical Team**
    - Physicians from key specialties
@@ -251,7 +251,7 @@ To ensure long-term sustainability and growth:
 
 1. **Training Program**: Comprehensive training for all end-users with role-specific modules
 2. **Super-User Network**: Designated super-users in each department to provide peer support
-3. **Knowledge Repository**: Centralized documentation and best practices library
+3. **Knowledge Repository**: Centralised documentation and best practices library
 4. **Regular Forums**: Monthly user group meetings to share experiences and improvements
 5. **Academic Partnership**: Collaboration with university partners for ongoing research and innovation
 
@@ -259,4 +259,4 @@ To ensure long-term sustainability and growth:
 
 The MIMIC Readmission Prediction project represents not just a technical achievement but a strategic initiative with significant clinical and financial impact. By focusing on quantifiable outcomes, seamless workflow integration, ethical considerations, and effective stakeholder communication, we can ensure the system delivers meaningful value to patients, clinicians, and the healthcare organisation as a whole.
 
-The success of this project will establish a foundation for future AI/ML initiatives in healthcare, demonstrating how advanced analytics can be effectively deployed to improve patient care while optimising resource utilization.
+The success of this project will establish a foundation for future AI/ML initiatives in healthcare, demonstrating how advanced analytics can be effectively deployed to improve patient care while optimising resource utilisation.
