@@ -766,7 +766,7 @@
                     <h1 class="display-3 fw-bold mb-4">Enterprise-Scale MLOps for Healthcare Prediction</h1>
                     <p class="lead mb-4">A strategic Proof-of-Concept demonstrating a robust, scalable MLOps pipeline for readmission prediction using MIMIC-III Demo data. Focuses on <strong>methodological rigor, end-to-end best practices, and production readiness</strong> for reliable healthcare AI.</p>
                     <div class="d-flex gap-3">
-                        <a href="https://github.com/your-github-username/MIMIC_readmission_predictor" class="btn btn-light btn-lg"><i class="fab fa-github me-2"></i>View on GitHub</a>
+                        <a href="https://github.com/ACl365/MIMIC_demo" class="btn btn-light btn-lg"><i class="fab fa-github me-2"></i>View on GitHub</a>
                         <a href="#overview" class="btn btn-outline-light btn-lg">Learn More</a>
                     </div>
                 </div>
@@ -965,7 +965,7 @@
 └── requirements.txt           # Python dependencies</pre>
                         </div>
                         <p class="mt-3">The project follows a modular structure (<code>src/data</code>, <code>src/features</code>, <code>src/models</code>, <code>src/utils</code>) facilitating maintainability, testability, and adherence to MLOps principles.</p>
-                        <p class="mt-3">For a detailed view of the architecture, including component descriptions and data flow, see the <a href="docs/architecture.md">Architecture Documentation</a>.</p>
+                        <p class="mt-3">For a detailed view of the architecture, including component descriptions and data flow, see the <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/architecture.md" target="_blank" rel="noopener noreferrer">Architecture Documentation</a>.</p>
                     </div>
                 </div>
             </div>
@@ -992,7 +992,7 @@
                             <h3 class="h4 mb-3 text-center">Advanced Temporal Modeling</h3>
                         </div>
                         <div class="feature-content">
-                            <p>Leveraging the sequential nature of EHR data using a <strong>Time-Aware LSTM with Attention</strong> (see <code>notebooks/time_aware_lstm.py</code>). This approach captures irregular time intervals and identifies critical time points.</p>
+                            <p>Leveraging the sequential nature of EHR data using a <strong>Time-Aware LSTM with Attention</strong> (see <code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/notebooks/time_aware_lstm.py" target="_blank" rel="noopener noreferrer">notebooks/time_aware_lstm.py</a></code>). This approach captures irregular time intervals and identifies critical time points.</p>
                             <div class="code-block mt-3">
 <pre>class TimeAwareLSTM(nn.Module):
     # ... (Initialization) ...
@@ -1009,7 +1009,7 @@
         output = self.classifier(context)
         return torch.sigmoid(output), attn_weights</pre>
                             </div>
-                            <p class="mt-2"><small>This enhanced model (<code>advanced_temporal_model_enhanced.ipynb</code>) demonstrates improved performance over static baselines (e.g., LightGBM) by explicitly modeling time dynamics, a critical factor often ignored.</small></p>
+                            <p class="mt-2"><small>This enhanced model (<code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/notebooks/advanced_temporal_model_enhanced.ipynb" target="_blank" rel="noopener noreferrer">advanced_temporal_model_enhanced.ipynb</a></code>) demonstrates improved performance over static baselines (e.g., LightGBM) by explicitly modeling time dynamics, a critical factor often ignored.</small></p>
                         </div>
                     </div>
                 </div>
@@ -1041,7 +1041,7 @@
                                     <p><small>Comparison of key metrics (Precision, Recall, F1, PR AUC). <strong>SMOTE demonstrates superior balanced performance (F1-score)</strong> on this dataset.</small></p>
                                 </div>
                             </div>
-                            <p class="mt-2"><small>See <code>src/models/imbalance_analysis.py</code> for implementation and <code>assets/imbalance_results_summary.csv</code> for full results.</small></p>
+                            <p class="mt-2"><small>See <code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/src/models/imbalance_analysis.py" target="_blank" rel="noopener noreferrer">src/models/imbalance_analysis.py</a></code> for implementation and <code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/assets/imbalance_results_summary.csv" target="_blank" rel="noopener noreferrer">assets/imbalance_results_summary.csv</a></code> for full results.</small></p>
                         </div>
                     </div>
                 </div>
@@ -1133,7 +1133,7 @@
                             <p>Connecting model performance to potential real-world value.</p>
                             <p><strong>Estimated Impact:</strong> Based on the SMOTE-enhanced model's performance (AUC-PR ~0.35 on this subset) and literature values for average readmission costs (~$15,000 per event [cite source]), scaling this pipeline could potentially identify an additional 5-10% of at-risk patients compared to baseline rules. This translates to potential annual savings of $Y million in a large hospital system by enabling targeted interventions (e.g., enhanced discharge planning, follow-up calls).</p>
                             <p><strong>Workflow Integration:</strong> The prediction score output by the API could be integrated into the EHR system as a clinical decision support alert for care coordinators or physicians during discharge planning, flagging high-risk patients for review.</p>
-                            <p class="mt-2"><small>See the <a href="docs/strategic_impact.md">Strategic Impact Documentation</a> for a detailed breakdown of potential value and integration points, including calculations based on demo data performance (with appropriate caveats).</small></p>
+                            <p class="mt-2"><small>See the <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/strategic_impact.md" target="_blank" rel="noopener noreferrer">Strategic Impact Documentation</a> for a detailed breakdown of potential value and integration points, including calculations based on demo data performance (with appropriate caveats).</small></p>
                         </div>
                     </div>
                 </div>
@@ -1193,7 +1193,7 @@
                                     <p><small>Individual feature impact.</small></p>
                                 </div>
                             </div>
-                            <p class="mt-auto pt-2"><small>Fairness/SHAP in <code>src/visualization/</code>. See <a href="docs/ethical_considerations.md">Ethical Considerations</a>.</small></p>
+                            <p class="mt-auto pt-2"><small>Fairness/SHAP in <code><a href="https://github.com/ACl365/MIMIC_demo/tree/main/src/visualization/" target="_blank" rel="noopener noreferrer">src/visualization/</a></code>. See <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/ethical_considerations.md" target="_blank" rel="noopener noreferrer">Ethical Considerations</a>.</small></p>
                         </div>
                     </div>
                 </div>
@@ -1410,7 +1410,7 @@ jobs:
                             <strong>Fairness-Performance Trade-offs:</strong> Our analysis revealed an inherent tension between demographic parity and overall model performance. We chose to prioritize equal opportunity (similar recall across groups) over demographic parity, as missing high-risk patients has more severe clinical consequences than false positives. This decision was made in consultation with clinical stakeholders and is continuously reassessed.
                         </div>
 
-                        <p class="mt-3">For a detailed discussion of our ethical framework, see the <a href="docs/ethical_considerations.md">Ethical Considerations documentation</a>.</p>
+                        <p class="mt-3">For a detailed discussion of our ethical framework, see the <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/ethical_considerations.md" target="_blank" rel="noopener noreferrer">Ethical Considerations documentation</a>.</p>
                     </div>
                 </div>
             </div>
@@ -1435,9 +1435,9 @@ jobs:
                             <li><strong>RAG for Explainability:</strong> Implement Retrieval-Augmented Generation (RAG) systems using vector databases (e.g., Pinecone, Weaviate) to retrieve relevant medical literature or similar patient cases, providing clinicians with evidence-based context alongside model predictions.</li>
                             <li><strong>Enhanced Temporal Models:</strong> Explore Transformer-based architectures for capturing longer-range dependencies in patient histories.</li>
                             <li><strong>Federated Learning:</strong> Investigate federated learning approaches for training models across multiple institutions without sharing raw patient data, addressing privacy concerns.</li>
-                            <li><strong>Synthetic Data Augmentation:</strong> Refine the use of synthetic data generation (<code>notebooks/synthetic_data_generator.py</code>) specifically for augmenting underrepresented patient subgroups or rare event scenarios to improve model robustness and fairness.</li>
+                            <li><strong>Synthetic Data Augmentation:</strong> Refine the use of synthetic data generation (<code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/notebooks/synthetic_data_generator.py" target="_blank" rel="noopener noreferrer">notebooks/synthetic_data_generator.py</a></code>) specifically for augmenting underrepresented patient subgroups or rare event scenarios to improve model robustness and fairness.</li>
                         </ul>
-                         <p class="mt-3"><small>See the <a href="FUTURE_WORK.md">Future Work Documentation</a> for more detailed plans on these enhancements.</small></p>
+                         <p class="mt-3"><small>See the <a href="https://github.com/ACl365/MIMIC_demo/blob/main/FUTURE_WORK.md" target="_blank" rel="noopener noreferrer">Future Work Documentation</a> for more detailed plans on these enhancements.</small></p>
                     </div>
                 </div>
             </div>
