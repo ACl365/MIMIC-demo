@@ -1,29 +1,37 @@
 """
 Logging utilities for the MIMIC project.
+
+Provides functions to configure and retrieve logger instances based on settings
+defined in the project's configuration file (`config.yaml`). Handles log levels,
+file output, and console output.
 """
 
 import logging
 import os
 import sys
 from datetime import datetime
-from typing import Optional  # Removed Path, Any, Dict
+from typing import Optional, Dict, Any # Added Dict, Any for config type hint
 
-# Import config functions inside methods to avoid circular imports
+# Import config functions inside methods to avoid circular imports during startup
 # from .config import get_project_root, load_config
 
 
 def get_log_level_from_config() -> int:
     """
-    Get the log level from the configuration file.
+    Get the logging level (e.g., logging.INFO, logging.DEBUG) from the configuration file.
+
+    Reads the 'logging.level' setting from the config. Defaults to logging.INFO
+    if the setting is missing, invalid, or if the config file cannot be loaded.
 
     Returns:
-        int: Logging level (e.g., logging.INFO, logging.DEBUG)
+        int: The logging level constant (e.g., logging.INFO, logging.DEBUG).
     """
     try:
-        from .config import load_config  # Import here
+        from .config import load_config  # Import here to avoid circular dependency
 
         config = load_config()
-        log_level_str = config.get("logging", {}).get("level", "INFO")
+        # Use .get() with defaults for safer access
+        log_level_str = config.get("logging", {}).get("level", "INFO").upper()
 
         # Map string log levels to logging constants
         log_levels = {
@@ -34,9 +42,16 @@ def get_log_level_from_config() -> int:
             "CRITICAL": logging.CRITICAL,
         }
 
-        return log_levels.get(log_level_str.upper(), logging.INFO)
-    except Exception:
-        # Default to INFO if there's an error loading the config
+        level = log_levels.get(log_level_str, logging.INFO)
+        # Ensure the retrieved level is actually an int (logging level constant)
+        if not isinstance(level, int):
+             print(f"WARNING: Invalid log level string '{log_level_str}' resolved to non-integer. Defaulting to INFO.")
+             return logging.INFO
+        return level
+
+    except Exception as e:
+        # Default to INFO if there's any error loading/parsing the config
+        print(f"WARNING: Could not load log level from config ({e}). Defaulting to INFO.")
         return logging.INFO
 
 
@@ -47,19 +62,27 @@ def setup_logger(
     console_output: bool = True,
 ) -> logging.Logger:
     """
-    Set up a logger with file and/or console handlers.
+    Set up and configure a logger instance.
+
+    Configures a logger with the specified name, level, and handlers.
+    If `log_level` is None, it attempts to get the level from the project config.
+    If `log_file` is None and file output is desired (implicitly or via config),
+    it creates a timestamped log file in the 'logs/' directory.
 
     Args:
-        name (str, optional): Logger name. Defaults to "mimic".
-        log_level (Optional[int], optional): Logging level. If None, gets from config.
-            Defaults to None.
-        log_file (Optional[str], optional): Path to log file. If None, logs to
-            logs/{name}_{timestamp}.log. Defaults to None.
-        console_output (bool, optional): Whether to output logs to console.
-            Defaults to True.
+        name (str, optional): Name of the logger. Defaults to "mimic".
+        log_level (Optional[int], optional): Logging level (e.g., logging.DEBUG).
+                                             If None, determined by `get_log_level_from_config()`.
+                                             Defaults to None.
+        log_file (Optional[str], optional): Explicit path to the log file. If set to an empty
+                                            string "", file logging is disabled. If set to None,
+                                            a default timestamped log file is created in 'logs/'.
+                                            Defaults to None.
+        console_output (bool, optional): Whether to add a handler for console output (stdout).
+                                         Defaults to True.
 
     Returns:
-        logging.Logger: Configured logger
+        logging.Logger: The configured logger instance.
     """
     # Get log level from config if not provided
     if log_level is None:
@@ -69,33 +92,48 @@ def setup_logger(
     logger = logging.getLogger(name)
     logger.setLevel(log_level)
 
-    # Clear existing handlers
-    logger.handlers = []
+    # Prevent duplicate handlers if logger already exists and is configured
+    if logger.handlers:
+        logger.handlers.clear()
 
     # Create formatter
     formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt='%Y-%m-%d %H:%M:%S' # Add date format
     )
 
-    # Add file handler if requested
-    if (
-        log_file is not None or log_file != ""
-    ):  # This condition might always be true, consider config flag
-        if log_file is None:
-            # Create logs directory if it doesn't exist
-            from .config import get_project_root  # Import here
+    # Determine if file output is enabled based on log_file argument
+    # None means use default path, "" means disable, specific path means use that path.
+    enable_file_output = log_file is None or log_file != ""
 
-            logs_dir = os.path.join(get_project_root(), "logs")
-            os.makedirs(logs_dir, exist_ok=True)
+    # Add file handler if enabled
+    if enable_file_output:
+        actual_log_file_path = log_file # Use provided path if not None
+        if actual_log_file_path is None:
+            # Create default log file path if log_file was None
+            try:
+                from .config import get_project_root  # Import here
 
-            # Create log file with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_file = os.path.join(logs_dir, f"{name}_{timestamp}.log")
+                logs_dir = get_project_root() / "logs"
+                logs_dir.mkdir(exist_ok=True) # Use pathlib's mkdir
 
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setLevel(log_level)
-        file_handler.setFormatter(formatter)
-        logger.addHandler(file_handler)
+                # Create log file with timestamp
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                actual_log_file_path = logs_dir / f"{name}_{timestamp}.log"
+            except Exception as e:
+                 print(f"ERROR: Could not create default log file path: {e}")
+                 actual_log_file_path = None # Disable file logging if path creation fails
+
+        if actual_log_file_path:
+            try:
+                file_handler = logging.FileHandler(str(actual_log_file_path), encoding='utf-8') # Specify encoding
+                file_handler.setLevel(log_level)
+                file_handler.setFormatter(formatter)
+                logger.addHandler(file_handler)
+                # print(f"Logging to file: {actual_log_file_path}") # Optional: confirm log file path
+            except Exception as e:
+                 print(f"ERROR: Could not set up file handler for {actual_log_file_path}: {e}")
+
 
     # Add console handler if requested
     if console_output:
@@ -104,53 +142,68 @@ def setup_logger(
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
+    # Prevent propagation to root logger if handlers are added
+    logger.propagate = False
+
     return logger
 
 
 def get_logger(name: str = "mimic") -> logging.Logger:
     """
-    Get a logger by name. If the logger doesn't exist, create it.
+    Get a logger instance by name.
+
+    If the logger with the given name already exists and has handlers, it's returned directly.
+    Otherwise, it sets up a new logger based on the project configuration (log level,
+    file output, console output). This ensures consistent logger configuration across the project.
 
     Args:
-        name (str, optional): Logger name. Defaults to "mimic".
+        name (str, optional): Name of the logger. Defaults to "mimic".
 
     Returns:
-        logging.Logger: Logger
+        logging.Logger: The logger instance, potentially newly configured.
     """
-    logger = logging.getLogger(name)
+    logger_instance = logging.getLogger(name)
 
-    # If logger has no handlers, set it up
-    if not logger.handlers:
+    # If logger has no handlers, set it up based on config
+    if not logger_instance.handlers:
         # Determine setup based on config (if available) or defaults
         try:
             from .config import load_config
 
             config = load_config()
             log_config = config.get("logging", {})
-            file_output = log_config.get(
-                "file_output", True
-            )  # Default to True if not specified
-            console_output = log_config.get("console_output", True)  # Default to True
+            file_output_enabled = log_config.get("file_output", True)
+            console_output_enabled = log_config.get("console_output", True)
             # Use default log file path logic within setup_logger if file_output is True
-            log_file_path = (
-                None if file_output else ""
-            )  # Pass empty string to disable file logging in setup_logger
-            logger = setup_logger(
-                name, console_output=console_output, log_file=log_file_path
-            )
-        except Exception:
-            # Fallback to basic setup if config loading fails
-            logger = setup_logger(name)
+            # Pass None to setup_logger to trigger default path generation if file output is enabled
+            # Pass "" to setup_logger explicitly disable file logging
+            log_file_path = None if file_output_enabled else ""
+            # Retrieve level from config via helper function
+            level = get_log_level_from_config()
 
-    return logger
+            # Call setup_logger with parameters derived from config
+            logger_instance = setup_logger(
+                name,
+                log_level=level,
+                console_output=console_output_enabled,
+                log_file=log_file_path
+            )
+        except Exception as e:
+            # Fallback to basic setup if config loading or setup fails
+            print(f"WARNING: Error setting up logger from config ({e}). Using default setup.")
+            logger_instance = setup_logger(name) # Basic setup with defaults
+
+    return logger_instance
 
 
 def is_debug_enabled() -> bool:
     """
-    Check if debug logging is enabled in the configuration.
+    Check if DEBUG logging level is enabled based on the configuration.
+
+    Useful for conditionally executing expensive debug logging or operations.
 
     Returns:
-        bool: True if debug logging is enabled, False otherwise
+        bool: True if the configured log level is DEBUG or lower, False otherwise.
     """
     # Note: get_log_level_from_config already imports load_config internally
     log_level = get_log_level_from_config()

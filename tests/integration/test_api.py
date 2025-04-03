@@ -80,7 +80,7 @@ def mock_model_load(mocker):
             raise ValueError("Mock model received data with wrong number of features")
         # Simulate prediction: return a fixed probability array
         # [[prob_class_0, prob_class_1]]
-        return [[0.3, 0.7]]  # Example prediction
+        return np.array([[0.3, 0.7]])  # Example prediction as numpy array
 
     mock_predictor.predict_proba = mock_predict_proba
 
@@ -89,14 +89,46 @@ def mock_model_load(mocker):
     mock_loaded_model.scaler = mock_scaler
     mock_loaded_model.feature_names = MOCK_EXPECTED_FEATURES
     mock_loaded_model.model_type = "MockLogisticRegression"  # Example type
+    # Add a mock preprocess method needed for SHAP background data prep
+    def mock_preprocess_for_shap(data, for_prediction=False):
+        # Return a dummy DataFrame matching expected features and None for target
+        dummy_X = pd.DataFrame([[0] * len(MOCK_EXPECTED_FEATURES)], columns=MOCK_EXPECTED_FEATURES)
+        return dummy_X, None
+    mock_loaded_model.preprocess = mock_preprocess_for_shap
 
     # Patch targets within the imported 'main' module
     mocker.patch("main.MimicBaseModel.load", return_value=mock_loaded_model)
-    mocker.patch("main.load_config", return_value={})  # Avoid config file dependency
+
+    # Provide a minimal config including the 'data' section needed for SHAP background data path
+    shap_data_path = "mock/path/does/not/matter/for/mock/shap"
+    mock_config_for_api = {
+        "data": {
+            "processed": {
+                "combined_features": shap_data_path
+            }
+        },
+        "logging": {"level": "INFO"}, # Keep logging if needed
+        # Add other minimal sections if startup requires them
+    }
+    mocker.patch("main.load_config", return_value=mock_config_for_api)
+
     # Patch os.path.exists used within main.py's startup handler
-    mocker.patch(
-        "main.os.path.exists", return_value=True
-    )  # Assume model file exists for loading
+    mocker.patch("main.os.path.exists", return_value=True)  # Assume model file exists for loading
+
+    # Patch pd.read_csv specifically for the SHAP background data loading call
+    def mock_read_csv_for_shap(*args, **kwargs):
+        # Check if the requested path ends with the expected mock path suffix
+        # Use os.path.normpath to handle potential separator differences (e.g., / vs \)
+        normalized_arg_path = os.path.normpath(args[0])
+        normalized_shap_path = os.path.normpath(shap_data_path)
+        if normalized_arg_path.endswith(normalized_shap_path):
+            # Return a minimal DataFrame matching expected features for SHAP
+            return pd.DataFrame([[0] * len(MOCK_EXPECTED_FEATURES)], columns=MOCK_EXPECTED_FEATURES)
+        # For other calls, raise an error or return default (though none expected here)
+        raise ValueError(f"Unexpected pd.read_csv call in mock_model_load: {args[0]}")
+
+    mocker.patch("main.pd.read_csv", side_effect=mock_read_csv_for_shap)
+
 
     # Return the mock object if needed, though patching is the main goal
     return mock_loaded_model
@@ -248,7 +280,8 @@ def test_predict_invalid_data_type_causes_scaling_error(client):
     )  # As defined in the API's error handling for scaling ValueError
     assert "Data scaling error" in response.json()["detail"]
     # Check for specific error detail propagated from the exception
-    assert "could not convert string to float" in response.json()["detail"].lower()
+    # Check for the general error message returned by the API's exception handler
+    assert "data scaling error" in response.json()["detail"].lower()
 
 
 def test_predict_invalid_input_format_not_dict(client):

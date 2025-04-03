@@ -8,19 +8,27 @@ This document outlines the strategic business impact of the MIMIC readmission pr
 
 Hospital readmissions represent a significant financial burden on healthcare systems. By implementing our readmission prediction model, we can estimate the following potential cost savings:
 
-| Metric | Current State | With Prediction Model | Potential Savings |
-|--------|--------------|----------------------|-------------------|
-| 30-day readmission rate | 15.3% | 13.0% (estimated) | 2.3% reduction |
-| Average cost per readmission | $11,200 | $11,200 | - |
-| Annual admissions (medium hospital) | 20,000 | 20,000 | - |
-| Annual readmissions | 3,060 | 2,600 | 460 fewer readmissions |
-| Annual readmission cost | $34.3 million | $29.1 million | $5.2 million |
+| Metric                          | Current State  | Illustrative Scenario w/ Model    | Potential Metric Impact  |
+|---------------------------------|----------------|-----------------------------------|--------------------------|
+| 30-day readmission rate         | 15.3%          | Illustrative: ~13.1%              | Illustrative: ~2.2% reduction |
+| Average cost per readmission    | $11,200        | $11,200                           | -                        |
+| Annual admissions (medium hosp) | 20,000         | 20,000                            | -                        |
+| Annual readmissions             | 3,060          | Illustrative: ~2,612              | Illustrative: ~448 fewer |
+| Annual readmission cost         | $34.3 million  | Illustrative: ~$29.3 million      | Illustrative: ~$5.0 million |
 
-**Assumptions:**
-- The model enables targeted interventions that reduce readmission rates by 15% (from 15.3% to 13.0%)
-- Average readmission cost based on published healthcare economics literature
-- Implementation costs (software, training, integration) estimated at $500,000 first year, $200,000 annually thereafter
-- ROI: Approximately 10:1 in the first year, improving thereafter
+**Illustrative Calculation & Assumptions (Using Demo Data Performance):**
+- **CRITICAL LIMITATION:** The following calculation uses performance metrics (Recall = 0.732) achieved by the SMOTE-enhanced model on the highly limited MIMIC-III *demo* dataset (~200 patients). **These results are NOT representative of real-world performance and CANNOT be used for reliable financial projections.** The purpose of this calculation is solely to *illustrate the methodology* for estimating potential impact *if* similar performance were achieved on a full dataset and combined with effective interventions.
+- **Illustrative Scenario:**
+    - Baseline Annual Readmissions (15.3% of 20,000): 3,060
+    - Readmissions Identified by Demo Model (Recall 0.732): 3,060 * 0.732 ≈ 2,240
+    - *Assumed* Intervention Success Rate: 20% (Hypothetical - needs clinical validation)
+    - Illustrative Prevented Readmissions: 2,240 * 20% ≈ 448
+    - Illustrative Annual Savings: 448 * $11,200/readmission ≈ $5.0 million
+- **Other Assumptions:**
+    - Average readmission cost ($11,200) based on published literature.
+    - Implementation costs estimated at $500k (Year 1), $200k (annual thereafter).
+- **Illustrative ROI (Year 1):** ~$5.0M / $0.5M ≈ 10:1 (Highly speculative, depends entirely on achieving reliable performance and intervention success).
+- **Conclusion:** While the demo model shows promise in identifying high-risk patients (significantly better than baseline), **substantial further validation on a full dataset is required** before any reliable impact quantification can be made. The primary value demonstrated at this stage is the potential of the modeling approach and the framework for future evaluation.
 
 ### Patient Outcome Improvements
 

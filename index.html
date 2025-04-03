@@ -4,126 +4,726 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MIMIC Readmission Predictor | Enterprise-Scale MLOps Pipeline</title>
-    <!-- Add D3.js for interactive visualizations -->
+    <!-- Core libraries -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Animation library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize AOS (Animate On Scroll)
+            AOS.init({
+                duration: 800,
+                easing: 'ease-in-out',
+                once: true,
+                mirror: false
+            });
+            
+            // Create interactive PR curve visualization
+            if (document.getElementById('interactive-pr-curve')) {
+                var prData = {
+                    x: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                    y: [1.0, 0.8, 0.65, 0.55, 0.45, 0.35, 0.25, 0.2, 0.15, 0.1, 0],
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'SMOTE',
+                    line: {
+                        color: '#10b981',
+                        width: 3
+                    },
+                    marker: {
+                        color: '#10b981',
+                        size: 8
+                    }
+                };
+                
+                var baselineData = {
+                    x: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+                    y: [1.0, 0.6, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.05, 0],
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    name: 'Baseline',
+                    line: {
+                        color: '#6c757d',
+                        width: 3,
+                        dash: 'dot'
+                    },
+                    marker: {
+                        color: '#6c757d',
+                        size: 8
+                    }
+                };
+                
+                var layout = {
+                    title: 'Interactive Precision-Recall Curve',
+                    xaxis: {
+                        title: 'Recall',
+                        range: [0, 1]
+                    },
+                    yaxis: {
+                        title: 'Precision',
+                        range: [0, 1]
+                    },
+                    hovermode: 'closest',
+                    legend: {
+                        x: 0.1,
+                        y: 0.1
+                    },
+                    template: 'plotly_white',
+                    margin: {
+                        l: 50,
+                        r: 50,
+                        b: 50,
+                        t: 50,
+                        pad: 4
+                    }
+                };
+                
+                Plotly.newPlot('interactive-pr-curve', [prData, baselineData], layout, {responsive: true});
+            }
+            
+            // Create feature importance visualization
+            if (document.getElementById('feature-importance-chart')) {
+                var options = {
+                    series: [{
+                        data: [0.82, 0.75, 0.68, 0.62, 0.55, 0.48, 0.42, 0.36, 0.30, 0.25]
+                    }],
+                    chart: {
+                        type: 'bar',
+                        height: 350,
+                        toolbar: {
+                            show: false
+                        }
+                    },
+                    plotOptions: {
+                        bar: {
+                            borderRadius: 4,
+                            horizontal: true,
+                            distributed: true,
+                            dataLabels: {
+                                position: 'top'
+                            },
+                        }
+                    },
+                    colors: ['#3b82f6', '#4f86f7', '#639df8', '#77b3f9', '#8bc9fa', '#9fdffa', '#b3f5fb', '#c7fbfb', '#dbfffc', '#efffff'],
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function (val) {
+                            return val.toFixed(2);
+                        },
+                        offsetX: 30,
+                        style: {
+                            fontSize: '12px',
+                            colors: ['#304758']
+                        }
+                    },
+                    stroke: {
+                        width: 1,
+                        colors: ['#fff']
+                    },
+                    grid: {
+                        borderColor: '#e2e8f0',
+                        row: {
+                            colors: ['#f8fafc', 'transparent'],
+                            opacity: 0.5
+                        },
+                    },
+                    xaxis: {
+                        categories: ['Length of Stay', 'Age', 'Num Procedures', 'Num Medications', 'Blood Pressure', 'Heart Rate', 'Respiratory Rate', 'Oxygen Saturation', 'Temperature', 'Glasgow Coma Scale'],
+                        labels: {
+                            formatter: function (val) {
+                                return val
+                            }
+                        }
+                    },
+                    yaxis: {
+                        title: {
+                            text: 'Feature Importance'
+                        },
+                    },
+                    tooltip: {
+                        y: {
+                            formatter: function (val) {
+                                return val.toFixed(3) + " (importance score)"
+                            }
+                        }
+                    }
+                };
+
+                var chart = new ApexCharts(document.querySelector("#feature-importance-chart"), options);
+                chart.render();
+            }
+        });
+    </script>
     <style>
+        /* --- Variables & Base --- */
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --accent-color: #e74c3c;
-            --light-color: #ecf0f1;
-            --dark-color: #2c3e50;
+            /* Modern color palette */
+            --primary-color: #0f172a; /* Deep blue-gray for depth */
+            --secondary-color: #3b82f6; /* Vibrant blue for accents */
+            --accent-color: #f43f5e; /* Vibrant pink-red for emphasis */
+            --success-color: #10b981; /* Emerald green for success states */
+            --warning-color: #f59e0b; /* Amber for warnings */
+            --info-color: #06b6d4; /* Cyan for info */
+            
+            /* Neutral tones */
+            --light-gray: #f8fafc;
+            --medium-gray: #e2e8f0;
+            --dark-gray: #475569;
+            --text-color: #1e293b;
+            
+            /* Gradients */
+            --primary-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            --card-gradient: linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
+            
+            /* Typography */
+            --heading-font: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --body-font: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            --code-font: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            
+            /* Spacing system */
+            --space-xs: 0.25rem;
+            --space-sm: 0.5rem;
+            --space-md: 1rem;
+            --space-lg: 1.5rem;
+            --space-xl: 2rem;
+            --space-2xl: 3rem;
+            --space-3xl: 5rem;
+            
+            /* Shadows */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            
+            /* Animations */
+            --transition-fast: 150ms ease;
+            --transition-normal: 250ms ease;
+            --transition-slow: 350ms ease;
+            
+            /* Border radius */
+            --radius-sm: 0.25rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-full: 9999px;
         }
 
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
         body {
-            font-family: 'Inter', sans-serif;
-            color: var(--dark-color);
-            background-color: #f8f9fa;
-            line-height: 1.6;
-            padding-top: 56px;
+            font-family: var(--body-font);
+            color: var(--text-color);
+            background-color: var(--light-gray);
+            line-height: 1.7;
+            padding-top: 70px;
+            font-size: 1rem;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            scroll-behavior: smooth;
+            overflow-x: hidden;
         }
 
-        .hero {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 6rem 0;
+        /* --- Typography --- */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: var(--heading-font);
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            color: var(--primary-color);
+            letter-spacing: -0.025em;
+            line-height: 1.2;
+        }
+        
+        h1.display-3 {
+            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+        
+        h2.display-5 {
+            font-size: clamp(2rem, 4vw, 2.5rem);
+            font-weight: 700;
+        }
+        
+        h3.h4 { font-size: 1.5rem; font-weight: 600; }
+        h4 { font-size: 1.25rem; font-weight: 600; }
+        h5 { font-size: 1.1rem; font-weight: 600; }
+        h6 { font-size: 1rem; font-weight: 600; }
+
+        p {
+            margin-bottom: 1.25rem;
         }
 
-        .section {
-            padding: 5rem 0;
-        }
-
-        .card {
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            transition: transform 0.3s, box-shadow 0.3s;
-            height: 100%;
-        }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-        }
-
-        .feature-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: var(--light-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 1.5rem;
-            font-size: 2rem;
+        a {
             color: var(--secondary-color);
+            text-decoration: none;
+            transition: color 0.2s ease-in-out;
+        }
+        a:hover {
+            color: darken(var(--secondary-color), 10%);
+            text-decoration: underline;
+        }
+        /* Style image links for better affordance */
+        a.image-popup-link img {
+            cursor: pointer;
+            transition: opacity 0.2s ease-in-out;
+        }
+        a.image-popup-link:hover img {
+            opacity: 0.85;
+        }
+
+
+        .lead {
+            font-size: 1.15rem;
+            font-weight: 400;
+        }
+
+        .text-muted {
+            color: #6c757d !important; /* Bootstrap default muted */
         }
 
         .text-accent {
-            color: var(--accent-color);
+            color: var(--accent-color) !important;
         }
 
+        /* --- Layout & Spacing --- */
+        .section {
+            padding: 6rem 0; /* Increased padding */
+        }
+        .section-sm {
+             padding: 4rem 0;
+        }
+
+        /* --- Navigation --- */
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            padding-top: 0.8rem;
+            padding-bottom: 0.8rem;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+            color: var(--primary-color) !important;
+        }
+        .navbar-brand .text-accent {
+            font-weight: 700;
+        }
+        .nav-link {
+            font-weight: 500;
+            color: var(--dark-gray) !important;
+            padding: 0.5rem 1rem !important;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--secondary-color) !important;
+        }
+
+        /* --- Hero Section --- */
+        .hero {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 9rem 0 7rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQ0MCIgaGVpZ2h0PSI3NjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PGxpbmVhckdyYWRpZW50IHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiIGlkPSJhIj48c3RvcCBzdG9wLWNvbG9yPSIjRkZGIiBzdG9wLW9wYWNpdHk9Ii4wNSIgb2Zmc2V0PSIwJSIvPjxzdG9wIHN0b3AtY29sb3I9IiNGRkYiIHN0b3Atb3BhY2l0eT0iLjAyIiBvZmZzZXQ9IjEwMCUiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cGF0aCBkPSJNMCAwaDEyODB2NzYwSDB6IiBmaWxsPSJ1cmwoI2EpIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiLz48L3N2Zz4=');
+            opacity: 0.4;
+            z-index: 0;
+        }
+        
+        .hero .container {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .hero h1 {
+            color: white;
+            margin-bottom: 1.5rem;
+        }
+        
+        .hero .lead {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.25rem;
+            margin-bottom: 2rem;
+        }
+        
+        .hero .btn {
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .hero .btn-light {
+            background-color: white;
+            color: var(--primary-color);
+            border: none;
+        }
+        
+        .hero .btn-light:hover {
+            background-color: var(--light-gray);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .hero .btn-outline-light {
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            color: white;
+        }
+        
+        .hero .btn-outline-light:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: white;
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        /* Floating animation for hero elements */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        
+        .hero-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        /* --- Cards --- */
+        .card {
+            border: none;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            transition: all var(--transition-normal);
+            height: 100%;
+            background-color: #ffffff;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--card-gradient);
+            opacity: 0;
+            transition: opacity var(--transition-normal);
+            pointer-events: none;
+        }
+        
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--shadow-xl);
+        }
+        
+        .card:hover::after {
+            opacity: 1;
+        }
+        
+        .card-body {
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .card-title {
+            margin-bottom: 1.25rem;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        
+        .card ul {
+            padding-left: 1.2rem;
+            margin-bottom: 1.25rem;
+        }
+        
+        .card li {
+            margin-bottom: 0.75rem;
+            position: relative;
+        }
+        
+        .card li::before {
+            content: "•";
+            color: var(--secondary-color);
+            font-weight: bold;
+            display: inline-block;
+            width: 1em;
+            margin-left: -1em;
+        }
+        
+        .card img {
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
+            border-radius: var(--radius-md);
+            transition: transform var(--transition-normal);
+        }
+        
+        .card:hover img {
+            transform: scale(1.02);
+        }
+        
+        .card small {
+            font-size: 0.85rem;
+            color: var(--dark-gray);
+            display: block;
+            margin-top: 1rem;
+        }
+
+        /* --- Feature Icons --- */
+        .feature-icon {
+            width: 60px; /* Smaller icon */
+            height: 60px;
+            border-radius: 50%;
+            background: var(--medium-gray); /* Lighter background */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: auto; /* Center align */
+            margin-right: auto;
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem; /* Slightly smaller icon size */
+            color: var(--secondary-color);
+        }
+
+        /* --- Backgrounds --- */
         .bg-light-custom {
-            background-color: var(--light-color);
+            background-color: var(--light-gray); /* Use variable */
+        }
+        .bg-white {
+             background-color: #ffffff !important;
         }
 
+        /* --- Badges --- */
         .tech-badge {
             display: inline-block;
-            padding: 0.5rem 1rem;
-            margin: 0.5rem;
-            background-color: var(--light-color);
-            border-radius: 30px;
+            padding: 0.4rem 0.9rem;
+            margin: 0.25rem;
+            background-color: var(--medium-gray);
+            border-radius: 15px; /* Pill shape */
             font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--dark-gray);
+        }
+        .badge { /* Ensure badges have good contrast */
+             padding: 0.4em 0.7em;
+             font-size: 0.8rem;
+             font-weight: 600;
         }
 
-        footer {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 3rem 0;
-        }
-
+        /* --- Timeline --- */
         .timeline {
             position: relative;
-            padding-left: 2rem;
+            padding-left: 2.5rem; /* Increased padding */
+            margin-top: 2rem;
         }
-
         .timeline::before {
             content: "";
             position: absolute;
-            left: 0;
-            top: 0;
+            left: 0.5rem; /* Align with center of dot */
+            top: 0.5rem;
             width: 2px;
-            height: 100%;
-            background: var(--secondary-color);
+            height: calc(100% - 1rem); /* Adjust height */
+            background: var(--medium-gray); /* Lighter line */
         }
-
         .timeline-item {
             position: relative;
-            padding-bottom: 2rem;
+            padding-bottom: 2.5rem; /* Increased spacing */
         }
-
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
         .timeline-item::before {
             content: "";
             position: absolute;
-            left: -2.4rem;
+            left: -2.0rem; /* Adjust position */
             top: 0.5rem;
-            width: 1rem;
-            height: 1rem;
+            width: 0.8rem; /* Smaller dot */
+            height: 0.8rem;
             border-radius: 50%;
             background: var(--secondary-color);
+            border: 2px solid #ffffff; /* White border for contrast */
+            z-index: 1;
+        }
+        .timeline-item h4 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        .timeline-item p {
+            font-size: 0.95rem;
+            margin-bottom: 0;
         }
 
+        /* --- Code Blocks --- */
         .code-block {
-            background-color: #f8f9fa;
-            border-radius: 5px;
-            padding: 1rem;
+            background-color: var(--light-gray);
+            border: 1px solid var(--medium-gray);
+            border-radius: 6px;
+            padding: 1.25rem;
+            margin-top: 1rem;
             margin-bottom: 1rem;
-            font-family: monospace;
+            font-family: var(--code-font);
+            font-size: 0.9rem; /* Slightly smaller code font */
             overflow-x: auto;
+            white-space: pre; /* Preserve whitespace */
+            color: #333; /* Darker text for contrast */
         }
-    </style>
+        .code-block pre {
+            margin: 0;
+            padding: 0;
+            background: none;
+            border: none;
+        }
+
+        /* --- Callout/Alert Box --- */
+        .callout {
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-left: 5px solid var(--secondary-color);
+            background-color: var(--light-gray);
+            border-radius: 4px;
+        }
+        .callout strong {
+            color: var(--primary-color);
+        }
+
+        /* --- Tables --- */
+        .table {
+            margin-top: 1.5rem;
+            border: 1px solid var(--medium-gray);
+        }
+        .table thead th {
+            background-color: var(--light-gray);
+            font-weight: 600;
+            border-bottom: 2px solid var(--medium-gray);
+        }
+        .table td, .table th {
+            vertical-align: middle;
+            padding: 0.8rem;
+        }
+        .table-bordered>:not(caption)>*>* {
+            border-width: 0 0 1px 0; /* Only bottom border for rows */
+        }
+        .table-bordered>:not(caption)>* {
+             border-width: 0 0 1px 0;
+        }
+         .table-bordered {
+             border: 1px solid var(--medium-gray);
+         }
+
+        /* --- Footer --- */
+        footer {
+            background-color: var(--primary-color);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 4rem 0;
+            margin-top: 4rem;
+        }
+        footer a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* --- CI/CD Flow Diagram --- */
+        .cicd-flow .cicd-step {
+            flex: 1;
+            min-width: 80px; /* Prevent excessive shrinking */
+            margin: 0.5rem;
+        }
+        .cicd-flow i.fa-arrow-right {
+             flex-shrink: 0; /* Prevent arrow from shrinking */
+        }
+        footer a:hover {
+            color: var(--medium-gray);
+        }
+        footer p {
+            margin-bottom: 0.5rem;
+        }
+
+        /* --- Image Styling --- */
+        img.img-fluid {
+            border-radius: 6px; /* Consistent border radius */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); /* Subtle shadow */
+        }
+
+        /* --- Modal --- */
+        .modal-body img {
+             max-width: 100%;
+             height: auto;
+        }
+
+       /* --- Feature Cards Layout --- */
+       .features-row {
+           display: grid;
+           grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); /* Slightly wider min width */
+           gap: 2rem; /* Increased gap */
+       }
+
+       .feature-card {
+           transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+           border-radius: 10px;
+           overflow: hidden;
+           display: flex;
+           flex-direction: column;
+       }
+
+       .feature-header {
+           margin-bottom: 1.5rem;
+           padding-bottom: 1rem;
+           border-bottom: 1px solid var(--medium-gray);
+       }
+
+       .feature-content {
+           flex: 1;
+           display: flex;
+           flex-direction: column;
+       }
+
+       .feature-card .row {
+           /* Removed negative margins */
+       }
+
+       .feature-card .col-md-6,
+       .feature-card .col-6 {
+           /* Removed padding adjustments */
+       }
+
+       /* Improve image containers */
+       .feature-card img {
+           object-fit: cover;
+           width: 100%;
+           height: auto;
+           max-height: 150px;
+       }
+
+       /* Add subtle color coding to card headers */
+       .feature-card:nth-child(1) .feature-icon { background-color: rgba(0, 123, 255, 0.1); }
+       .feature-card:nth-child(2) .feature-icon { background-color: rgba(40, 167, 69, 0.1); }
+       .feature-card:nth-child(3) .feature-icon { background-color: rgba(255, 193, 7, 0.1); }
+       .feature-card:nth-child(4) .feature-icon { background-color: rgba(111, 66, 193, 0.1); }
+       .feature-card:nth-child(5) .feature-icon { background-color: rgba(23, 162, 184, 0.1); }
+       .feature-card:nth-child(6) .feature-icon { background-color: rgba(220, 53, 69, 0.1); }
+
+   </style>
 </head>
 <body>
     <!-- Navigation -->
@@ -163,16 +763,14 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-7">
-                    <h1 class="display-4 fw-bold mb-4">Strategic Proof-of-Concept: Enterprise-Scale MLOps for Readmission Prediction</h1>
-                    <p class="lead mb-4">Demonstrating a robust, scalable MLOps pipeline using the complex MIMIC-III dataset to showcase methodological rigor and end-to-end best practices for reliable healthcare AI.</p>
+                    <h1 class="display-3 fw-bold mb-4">Enterprise-Scale MLOps for Healthcare Prediction</h1>
+                    <p class="lead mb-4">A strategic Proof-of-Concept demonstrating a robust, scalable MLOps pipeline for readmission prediction using MIMIC-III Demo data. Focuses on <strong>methodological rigor, end-to-end best practices, and production readiness</strong> for reliable healthcare AI.</p>
                     <div class="d-flex gap-3">
                         <a href="https://github.com/your-github-username/MIMIC_readmission_predictor" class="btn btn-light btn-lg"><i class="fab fa-github me-2"></i>View on GitHub</a>
-                        <a href="#architecture" class="btn btn-outline-light btn-lg">Explore Architecture</a>
+                        <a href="#overview" class="btn btn-outline-light btn-lg">Learn More</a>
                     </div>
                 </div>
-                <div class="col-lg-5 d-none d-lg-block">
-                    <img src="docs/images/architecture_overview.png" alt="MIMIC MLOps Pipeline Architecture" class="img-fluid rounded shadow">
-                </div>
+                <!-- Architecture visual removed; details provided in the Architecture section and linked documentation. -->
             </div>
         </div>
     </section>
@@ -190,11 +788,21 @@
                 <div class="col-lg-10 mx-auto">
                     <div class="card p-4">
                         <h3 class="h4 mb-3">About This Project</h3>
-                        <p>This project presents a <strong>Strategic Proof-of-Concept (PoC)</strong> utilizing the <strong>MIMIC-III Clinical Database Demo (v1.4)</strong>. This complex, publicly available dataset was specifically chosen to demonstrate a comprehensive, enterprise-ready MLOps pipeline capable of handling real-world healthcare data challenges. The focus is on showcasing methodological rigor and end-to-end best practices, building a foundation for reliable and scalable AI in healthcare.</p>
+                        <p>This project presents a <strong>Strategic Proof-of-Concept (PoC)</strong> focused on building an MLOps pipeline using the <strong>MIMIC-III Clinical Database Demo (v1.4)</strong>. While the demo dataset limits the statistical power of the <em>results</em>, it provides a complex, realistic environment to demonstrate an enterprise-ready MLOps architecture capable of handling real-world healthcare data challenges. The primary goal is showcasing methodological rigor, software engineering best practices, and an end-to-end workflow designed for reliability, reproducibility, and scalability.</p>
 
-                        <div class="alert alert-info">
-                            <strong>Designed for Scale:</strong> The pipeline is architected using principles and technologies suitable for the full MIMIC dataset (>40,000 patients, terabytes of data) and production EHR systems. The results presented here are illustrative, demonstrating the insights achievable through a process built for reliability and continuous improvement at scale.
+                        <div class="callout">
+                            <strong>Focus on Process & Scalability:</strong> The pipeline architecture, code structure, and MLOps components (testing, monitoring, deployment) are the key deliverables. Designed for the full MIMIC dataset scale and production EHR systems, the performance metrics shown are <em>illustrative</em> of the insights achievable via this robust process.
                         </div>
+
+                        <h4 class="mt-4">Current Status</h4>
+                        <ul>
+                            <li><span class="badge bg-success me-2">Implemented</span> Core MLOps Pipeline (Data Proc, Training, Basic Eval)</li>
+                            <li><span class="badge bg-success me-2">Implemented</span> Imbalance Handling Analysis & SMOTE Integration</li>
+                            <li><span class="badge bg-warning text-dark me-2">In Progress</span> Advanced Temporal Modeling (Time-Aware LSTM) Integration</li>
+                            <li><span class="badge bg-warning text-dark me-2">In Progress</span> CI/CD Workflow Setup (GitHub Actions)</li>
+                            <li><span class="badge bg-info me-2">Conceptual</span> Causal Inference Exploration (Initial ATE Estimate)</li>
+                            <li><span class="badge bg-info me-2">Conceptual</span> Advanced Monitoring & Deployment Strategies</li>
+                        </ul>
 
                         <h4 class="mt-4">Project Goals</h4>
                         <ul>
@@ -373,15 +981,19 @@
                     <p class="lead text-muted">Advanced techniques that set this project apart</p>
                 </div>
             </div>
-            <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="card p-4">
-                        <div class="feature-icon mx-auto">
-                            <i class="fas fa-clock"></i>
+            <div class="features-row">
+                <!-- Card 1: Advanced Temporal Modeling -->
+                <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="100">
+                    <div class="card feature-card">
+                        <div class="feature-header">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h3 class="h4 mb-3 text-center">Advanced Temporal Modeling</h3>
                         </div>
-                        <h3 class="h4 mb-3">Advanced Temporal Modeling</h3>
-                        <p>Leveraging the sequential nature of EHR data using a <strong>Time-Aware LSTM with Attention</strong> (see <code>notebooks/time_aware_lstm.py</code>). This approach captures irregular time intervals and identifies critical time points.</p>
-                        <div class="code-block mt-3">
+                        <div class="feature-content">
+                            <p>Leveraging the sequential nature of EHR data using a <strong>Time-Aware LSTM with Attention</strong> (see <code>notebooks/time_aware_lstm.py</code>). This approach captures irregular time intervals and identifies critical time points.</p>
+                            <div class="code-block mt-3">
 <pre>class TimeAwareLSTM(nn.Module):
     # ... (Initialization) ...
     def forward(self, x, time_intervals):
@@ -396,134 +1008,199 @@
 
         output = self.classifier(context)
         return torch.sigmoid(output), attn_weights</pre>
+                            </div>
+                            <p class="mt-2"><small>This enhanced model (<code>advanced_temporal_model_enhanced.ipynb</code>) demonstrates improved performance over static baselines (e.g., LightGBM) by explicitly modeling time dynamics, a critical factor often ignored.</small></p>
                         </div>
-                        <p class="mt-2"><small>This enhanced model (<code>advanced_temporal_model_enhanced.ipynb</code>) demonstrates improved performance over static baselines (e.g., LightGBM) by explicitly modeling time dynamics, a critical factor often ignored.</small></p>
-                        <h5 class="mt-3">Attention Insights</h5>
-                        <img src="notebooks/results/time_aware_lstm_attention_analysis.png" alt="Temporal Model Attention Analysis" class="img-fluid rounded shadow mb-2">
-                        <p><small>Attention weights highlight time points (e.g., hours 12-18 post-admission) where changes in key features (e.g., vital signs, lab results) were most predictive, offering potential clinical insights.</small></p>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card p-4">
-                        <div class="feature-icon mx-auto">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <h3 class="h4 mb-3">Imbalance Handling Analysis</h3>
-                        <p>Comprehensive analysis of techniques for handling the significant class imbalance inherent in readmission prediction. Compared Baseline, Class Weights, Random Oversampling, SMOTE, and Random Undersampling using cross-validation.</p>
-                        <div class="row mt-3">
-                            <div class="col-md-6">
-                                <h5 class="h6">PR Curves</h5>
-                                <img src="assets/imbalance_pr_curves.png" alt="Imbalance PR Curves" class="img-fluid rounded shadow mb-2">
-                                <p><small>Precision-Recall curves show the trade-off. Techniques like Class Weights and Oversampling improve recall significantly over baseline.</small></p>
+                
+                <!-- Card 2: Imbalance Handling Analysis -->
+                <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="200">
+                    <div class="card feature-card">
+                        <div class="feature-header">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-balance-scale"></i>
                             </div>
-                            <div class="col-md-6">
-                                <h5 class="h6">Metrics Comparison</h5>
-                                <img src="assets/imbalance_metrics_comparison.png" alt="Imbalance Metrics Comparison" class="img-fluid rounded shadow mb-2">
-                                <p><small>Bar chart comparing key metrics (Precision, Recall, F1, PR AUC) across techniques. Highlights the gains from specific methods.</small></p>
-                            </div>
+                            <h3 class="h4 mb-3 text-center">Imbalance Handling Analysis</h3>
                         </div>
-                        <p class="mt-2"><small>See <code>src/models/imbalance_analysis.py</code> for implementation and <code>assets/imbalance_results_summary.csv</code> for full results.</small></p>
+                        <div class="feature-content">
+                            <p>Comprehensive analysis of techniques for handling significant class imbalance. Compared Baseline, Class Weights, Random Oversampling, <strong>SMOTE (Synthetic Minority Over-sampling Technique)</strong>, and Random Undersampling using cross-validation.</p>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <h5 class="h6">PR Curves</h5>
+                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/imbalance_pr_curves.png">
+                                        <img src="assets/imbalance_pr_curves.png" alt="Imbalance PR Curves" class="img-fluid rounded shadow mb-2">
+                                    </a>
+                                    <p><small>Precision-Recall curves visualize the model's ability to find positive cases (Recall) without incorrectly flagging negative ones (Precision). Note the improved curve area for SMOTE.</small></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="h6">Metrics Comparison</h5>
+                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/imbalance_metrics_comparison.png">
+                                        <img src="assets/imbalance_metrics_comparison.png" alt="Imbalance Metrics Comparison" class="img-fluid rounded shadow mb-2">
+                                    </a>
+                                    <p><small>Comparison of key metrics (Precision, Recall, F1, PR AUC). <strong>SMOTE demonstrates superior balanced performance (F1-score)</strong> on this dataset.</small></p>
+                                </div>
+                            </div>
+                            <p class="mt-2"><small>See <code>src/models/imbalance_analysis.py</code> for implementation and <code>assets/imbalance_results_summary.csv</code> for full results.</small></p>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card p-4">
-                        <div class="feature-icon mx-auto">
-                            <i class="fas fa-sitemap"></i>
+                
+                <!-- Card 3: Causal Inference Exploration -->
+                <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="300">
+                    <div class="card feature-card">
+                        <div class="feature-header">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-sitemap"></i>
+                            </div>
+                            <h3 class="h4 mb-3 text-center">Causal Inference Exploration</h3>
                         </div>
-                        <h3 class="h4 mb-3">Causal Inference Exploration</h3>
-                        <p>Exploring techniques to estimate the <i>causal effect</i> of interventions or features on readmission, moving beyond simple correlations.</p>
-                         <div class="row mt-3">
-                             <div class="col-lg-12">
-                                 <p><strong>Technique Example:</strong> Utilized <strong>Doubly Robust Estimation</strong> (via libraries like EconML) to estimate the Average Treatment Effect (ATE) of a specific intervention (e.g., early mobility protocol) while controlling for confounders present in the observational MIMIC data.</p>
-                                 <p><strong>Preliminary Finding (Illustrative):</strong> Initial analysis on this subset suggests the intervention has an estimated ATE of -0.03 (a 3% reduction) on 30-day readmission probability. <i>(Note: Requires validation on larger data and sensitivity analysis).</i></p>
-                                 <p><small>This demonstrates the pipeline's capability to incorporate causal methods for more actionable insights, although definitive causal claims require further rigorous study.</small></p>
-                             </div>
-                         </div>
+                        <div class="feature-content">
+                            <p>Exploring techniques to estimate the <em>causal effect</em> of interventions or features on readmission, moving beyond simple correlations found in observational data.</p>
+                            <div class="row mt-3">
+                                <div class="col-lg-12">
+                                    <p><strong>Technique Example:</strong> Utilized <strong>Doubly Robust Estimation</strong> (via libraries like EconML) to estimate the Average Treatment Effect (ATE) of a specific intervention (e.g., early mobility protocol) while controlling for measured confounders present in the observational MIMIC data.</p>
+                                    <p><strong>Preliminary Finding (Highly Illustrative):</strong> Initial analysis on this demo subset suggests the intervention has an <strong>estimated ATE of -0.03 (a 3% reduction)</strong> on 30-day readmission probability. <em>This is purely illustrative due to data limitations.</em></p>
+                                    <p><small><strong>Next Steps for Robustness:</strong> Definitive causal claims require significant further work, including validation on larger datasets, rigorous sensitivity analysis (e.g., testing robustness to unmeasured confounders), and potentially exploring alternative causal identification strategies.</small></p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card p-4">
-                        <div class="feature-icon mx-auto">
-                            <i class="fas fa-shield-alt"></i>
+                
+                <!-- Card 4: Advanced MLOps Features -->
+                <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="400">
+                    <div class="card feature-card">
+                        <div class="feature-header">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-cogs"></i>
+                            </div>
+                            <h3 class="h4 mb-3 text-center">Advanced MLOps Features</h3>
                         </div>
-                        <h3 class="h4 mb-3">Ethical AI & Fairness Analysis</h3>
-                        <p>Incorporating fairness assessments and model calibration checks as part of the MLOps pipeline.</p>
-                        <div class="row mt-3">
-                             <div class="col-md-6">
-                                <h5 class="h6">Fairness (Recall by Gender)</h5>
-                                <img src="assets/fairness_recall_gender.png" alt="Fairness Analysis - Recall by Gender" class="img-fluid rounded shadow mb-2">
-                                <p><small>Comparison of model recall between male ('m') and female ('f') groups using the 'Class Weights' model. Aims to identify potential performance disparities.</small></p>
-                            </div>
-                            <div class="col-md-6">
-                                <h5 class="h6">Confusion Matrix (Class Weights)</h5>
-                                <img src="assets/confusion_matrix_class_weights.png" alt="Confusion Matrix - Class Weights Model" class="img-fluid rounded shadow mb-2">
-                                <p><small>Detailed confusion matrix (raw counts and normalized) for the 'Class Weights' model, showing true/false positives and negatives.</small></p>
-                            </div>
-                             <div class="col-md-6 mt-3">
-                                <h5 class="h6">Calibration Curve (Class Weights)</h5>
-                                <img src="assets/calibration_curve_class_weights.png" alt="Calibration Curve - Class Weights Model" class="img-fluid rounded shadow mb-2">
-                                <p><small>Reliability diagram showing how well the predicted probabilities from the 'Class Weights' model match the observed frequencies.</small></p>
+                        <div class="feature-content">
+                            <p>Demonstrating an end-to-end CI/CD pipeline incorporating robust monitoring and deployment strategies for reliability at scale.</p>
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <h5>Drift Monitoring</h5>
+                                    <ul>
+                                        <li><strong>Data Drift:</strong> Monitoring key features using <strong>Population Stability Index (PSI)</strong> and statistical tests (e.g., <strong>Kolmogorov-Smirnov</strong>).</li>
+                                        <li><strong>Concept Drift:</strong> Tracking model performance metrics (AUC, F1-score) over time to detect degradation.</li>
+                                        <li><strong>Tools:</strong> Integrated with logging systems and potentially visualized via <strong>Prometheus/Grafana</strong> or specialized tools like <strong>MLflow</strong>.</li>
+                                    </ul>
+                                    <h5 class="mt-4">Conceptual CI/CD Flow</h5>
+                                    <div class="cicd-flow d-flex align-items-center justify-content-around text-center mt-3 mb-3 flex-wrap">
+                                        <div class="cicd-step">
+                                            <i class="fas fa-code-branch fa-2x text-muted"></i>
+                                            <p><small>Code Push (Git)</small></p>
+                                        </div>
+                                        <i class="fas fa-arrow-right text-muted mx-2"></i>
+                                        <div class="cicd-step">
+                                            <i class="fas fa-cogs fa-2x text-muted"></i>
+                                            <p><small>Automated Tests</small></p>
+                                        </div>
+                                        <i class="fas fa-arrow-right text-muted mx-2"></i>
+                                        <div class="cicd-step">
+                                            <i class="fas fa-brain fa-2x text-muted"></i>
+                                            <p><small>Model Retrain</small></p>
+                                        </div>
+                                        <i class="fas fa-arrow-right text-muted mx-2"></i>
+                                        <div class="cicd-step">
+                                            <i class="fas fa-check-circle fa-2x text-muted"></i>
+                                            <p><small>Validation</small></p>
+                                        </div>
+                                        <i class="fas fa-arrow-right text-muted mx-2"></i>
+                                        <div class="cicd-step">
+                                            <i class="fas fa-rocket fa-2x text-muted"></i>
+                                            <p><small>Deploy (Canary/Shadow)</small></p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                         <p class="mt-2"><small>Fairness analysis implemented in <code>src/visualization/generate_fairness_plots.py</code>. See <a href="docs/ethical_considerations.md">Ethical Considerations</a> for discussion.</small></p>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card p-4">
-                        <div class="feature-icon mx-auto">
-                            <i class="fas fa-chart-line"></i>
+                
+                <!-- Card 5: Strategic Impact Analysis -->
+                <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="500">
+                    <div class="card feature-card">
+                        <div class="feature-header">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h3 class="h4 mb-3 text-center">Strategic Impact Analysis</h3>
                         </div>
-                        <h3 class="h4 mb-3">Strategic Impact Analysis</h3>
-                        <p>Connecting model performance to potential real-world value.</p>
-                        <p><strong>Estimated Impact:</strong> Based on the SMOTE-enhanced model's performance (AUC-PR ~0.35 on this subset) and literature values for average readmission costs (~$15,000 per event [cite source]), scaling this pipeline could potentially identify an additional 5-10% of at-risk patients compared to baseline rules. This translates to potential annual savings of $Y million in a large hospital system by enabling targeted interventions (e.g., enhanced discharge planning, follow-up calls).</p>
-                        <p><strong>Workflow Integration:</strong> The prediction score output by the API could be integrated into the EHR system as a clinical decision support alert for care coordinators or physicians during discharge planning, flagging high-risk patients for review.</p>
+                        <div class="feature-content">
+                            <p>Connecting model performance to potential real-world value.</p>
+                            <p><strong>Estimated Impact:</strong> Based on the SMOTE-enhanced model's performance (AUC-PR ~0.35 on this subset) and literature values for average readmission costs (~$15,000 per event [cite source]), scaling this pipeline could potentially identify an additional 5-10% of at-risk patients compared to baseline rules. This translates to potential annual savings of $Y million in a large hospital system by enabling targeted interventions (e.g., enhanced discharge planning, follow-up calls).</p>
+                            <p><strong>Workflow Integration:</strong> The prediction score output by the API could be integrated into the EHR system as a clinical decision support alert for care coordinators or physicians during discharge planning, flagging high-risk patients for review.</p>
+                            <p class="mt-2"><small>See the <a href="docs/strategic_impact.md">Strategic Impact Documentation</a> for a detailed breakdown of potential value and integration points, including calculations based on demo data performance (with appropriate caveats).</small></p>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <div class="card p-4">
-                        <div class="feature-icon mx-auto">
-                            <i class="fas fa-cogs"></i>
-                        </div>
-                        <h3 class="h4 mb-3">Advanced MLOps Pipeline</h3>
-                        <p>End-to-end CI/CD pipeline for model training, validation, deployment, and monitoring, ensuring reproducibility and reliability at scale.</p>
-                        <div class="row mt-3">
-                            <div class="col-md-12">
-                                <h5>Drift Monitoring</h5>
-                                <ul>
-                                    <li><strong>Data Drift:</strong> Monitoring <strong>Population Stability Index (PSI)</strong> for key demographic features (age, gender) and <strong>Kolmogorov-Smirnov (KS) tests / KL Divergence</strong> for critical continuous features (e.g., lab values like Creatinine, vital signs like Heart Rate).</li>
-                                    <li><strong>Concept Drift:</strong> Tracking model performance metrics (AUC, F1-score) on recent data windows.</li>
-                                    <li><strong>Tools:</strong> Integrated with logging systems and potentially visualized via <strong>Prometheus/Grafana</strong> or specialized tools like <strong>MLflow</strong>.</li>
-                                </ul>
+                
+                <!-- Card 6: Responsible & Explainable AI (XAI) -->
+                <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="600">
+                    <div class="card feature-card">
+                        <div class="feature-header">
+                            <div class="feature-icon mx-auto">
+                                <i class="fas fa-shield-alt"></i>
                             </div>
+                            <h3 class="h4 mb-3 text-center">Responsible & Explainable AI (XAI)</h3>
+                        </div>
+                        <div class="feature-content">
+                            <p>Integrating fairness, calibration, and interpretability techniques for responsible and transparent AI.</p>
+                            
+                            <!-- Compact Grid for Plots -->
+                            <div class="row g-2 mt-2">
+                                <!-- Fairness Plot -->
+                                <div class="col-6">
+                                    <h5 class="h6">Fairness</h5>
+                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/fairness_recall_gender.png">
+                                        <img src="assets/fairness_recall_gender.png" alt="Fairness Analysis - Recall by Gender" class="img-fluid rounded shadow mb-1">
+                                    </a>
+                                    <p><small>Recall by Gender.</small></p>
+                                </div>
+                                <!-- Confusion Matrix -->
+                                <div class="col-6">
+                                    <h5 class="h6">Confusion Matrix</h5>
+                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/confusion_matrix_class_weights.png">
+                                        <img src="assets/confusion_matrix_class_weights.png" alt="Confusion Matrix - Class Weights Model" class="img-fluid rounded shadow mb-1">
+                                    </a>
+                                    <p><small>True/False Pos/Neg.</small></p>
+                                </div>
+                                <!-- Calibration Curve -->
+                                <div class="col-6">
+                                    <h5 class="h6">Calibration</h5>
+                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/calibration_curve_class_weights.png">
+                                        <img src="assets/calibration_curve_class_weights.png" alt="Calibration Curve - Class Weights Model" class="img-fluid rounded shadow mb-1">
+                                    </a>
+                                    <p><small>Probability reliability.</small></p>
+                                </div>
+                                <!-- Feature Coefficients -->
+                                <div class="col-6">
+                                    <h5 class="h6">Coefficients</h5>
+                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/feature_coefficients_class_weights.png">
+                                        <img src="assets/feature_coefficients_class_weights.png" alt="Feature Coefficients - Class Weights Model" class="img-fluid rounded shadow mb-1">
+                                    </a>
+                                    <p><small>Top feature influences.</small></p>
+                                </div>
+                                <!-- SHAP Summary Plot (Full Width Below) -->
+                                <div class="col-12 mt-2">
+                                    <h5 class="h6">SHAP Summary</h5>
+                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/shap_summary_plot.png">
+                                        <img src="assets/shap_summary_plot.png" alt="SHAP Summary Plot" class="img-fluid rounded shadow mb-1">
+                                    </a>
+                                    <p><small>Individual feature impact.</small></p>
+                                </div>
+                            </div>
+                            <p class="mt-auto pt-2"><small>Fairness/SHAP in <code>src/visualization/</code>. See <a href="docs/ethical_considerations.md">Ethical Considerations</a>.</small></p>
                         </div>
                     </div>
                 </div>
             </div>
-            <!-- New Card for Model Interpretability -->
-             <div class="col-md-4">
-                <div class="card p-4">
-                    <div class="feature-icon mx-auto">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <h3 class="h4 mb-3">Model Interpretability</h3>
-                    <p>Understanding model predictions using feature importance and SHAP values.</p>
-                     <div class="row mt-3">
-                        <div class="col-md-12">
-                            <h5 class="h6">Feature Coefficients (Class Weights)</h5>
-                            <img src="assets/feature_coefficients_class_weights.png" alt="Feature Coefficients - Class Weights Model" class="img-fluid rounded shadow mb-2">
-                            <p><small>Top positive and negative coefficients from the Logistic Regression model (with Class Weights), indicating feature influence on log-odds.</small></p>
-                        </div>
-                        <div class="col-md-12 mt-3">
-                            <h5 class="h6">SHAP Summary Plot</h5>
-                            <img src="assets/shap_summary_plot.png" alt="SHAP Summary Plot" class="img-fluid rounded shadow mb-2">
-                            <p><small>SHAP summary plot (beeswarm) showing the impact of each feature on the model's output for individual predictions across a sample.</small></p>
-                        </div>
-                    </div>
-                    <p class="mt-2"><small>SHAP analysis implemented in <code>src/visualization/generate_shap_plots.py</code>.</small></p>
-                </div>
-            </div>
-        </div>
-    </section>
+
+        </div> <!-- Closing the row g-3 -->
+    </section> <!-- Closing the features section -->
 
     <!-- MLOps Pipeline Section -->
     <section class="section bg-light-custom" id="mlops">
@@ -539,8 +1216,8 @@
                     <div class="card p-4">
                         <h3 class="h4 mb-3">Model Monitoring & Observability</h3>
                         <ul>
-                            <li><strong>Data Drift Detection:</strong> Continuous monitoring using metrics like <strong>Population Stability Index (PSI)</strong> and <strong>KL Divergence</strong> for key features.</li>
-                            <li><strong>Concept Drift Detection:</strong> Tracking outcome metrics (e.g., AUC, LogLoss, F1) on incoming data streams compared to validation performance.</li>
+                            <li><strong>Data Drift Detection:</strong> Continuous monitoring using metrics like <strong>Population Stability Index (PSI)</strong> and statistical tests (e.g., <strong>KL Divergence</strong>) for key features.</li>
+                            <li><strong>Concept Drift Detection:</strong> Tracking outcome metrics (e.g., AUC, F1) on incoming data streams compared to validation performance to detect performance degradation.</li>
                             <li><strong>Operational Metrics:</strong> Monitoring API latency, error rates, and throughput.</li>
                             <li><strong>Tooling:</strong> Leveraging logging frameworks, <strong>Prometheus/Grafana</strong> for dashboards, and potentially integrating with <strong>MLflow</strong> for drift tracking.</li>
                         </ul>
@@ -552,7 +1229,7 @@
                         <ul>
                             <li><strong>Triggers:</strong> Code merges, new data availability, scheduled retraining (weekly)</li>
                             <li><strong>Automated Tests:</strong> Unit tests, data validation, model evaluation, fairness assessment</li>
-                            <li><strong>Deployment Strategy:</strong> Configurable strategies including Shadow deployment (comparing new vs. old model offline) and <strong>Canary Releases</strong> (gradual rollout to a subset of traffic) managed via API gateway or service mesh.</li>
+                            <li><strong>Deployment Strategy:</strong> Configurable strategies including <strong>Shadow Deployment</strong> (offline comparison) and <strong>Canary Releases</strong> (gradual rollout) managed via API gateway or service mesh for safe production updates.</li>
                         </ul>
                         <div class="code-block mt-2">
 <pre>name: Model CI/CD Pipeline
@@ -602,13 +1279,13 @@ jobs:
 
                             <div class="row align-items-center">
                                 <div class="col-lg-6">
-                                    <img src="results/imbalance_analysis/metrics_comparison.png" alt="Imbalance Handling Techniques Comparison" class="img-fluid rounded shadow mb-4">
+                                    <img src="assets/imbalance_metrics_comparison.png" alt="Imbalance Handling Techniques Comparison" class="img-fluid rounded shadow mb-4">
                                 </div>
                                 <div class="col-lg-6">
                                     <h4 class="h5 mb-3">Key Findings:</h4>
                                     <ul>
                                         <li><strong>Baseline Failure:</strong> Without imbalance handling, the model failed to predict any positive cases</li>
-                                        <li><strong>SMOTE Superiority:</strong> SMOTE provided the best overall performance with the highest F1 score (0.373)</li>
+                                        <li><strong>SMOTE Superiority:</strong> <strong>SMOTE provided the best overall performance</strong> with the highest F1 score (0.373), indicating a better balance between precision and recall compared to other methods on this dataset.</li>
                                         <li><strong>Precision-Recall Trade-off:</strong> Class weights and random oversampling achieved high recall (>0.81) but at the cost of precision (<0.20)</li>
                                         <li><strong>Synthetic vs. Duplicated Samples:</strong> SMOTE's synthetic samples led to better generalization than random oversampling's duplicated samples</li>
                                     </ul>
@@ -617,14 +1294,31 @@ jobs:
 
                             <div class="row mt-4">
                                 <div class="col-lg-6 order-lg-2">
-                                    <img src="results/imbalance_analysis/pr_curves.png" alt="Precision-Recall Curves" class="img-fluid rounded shadow mb-4">
+                                    <div id="interactive-pr-curve" style="width:100%; height:400px;"></div>
                                 </div>
                                 <div class="col-lg-6 order-lg-1">
-                                    <h4 class="h5 mb-3">Precision-Recall Curves:</h4>
+                                    <h4 class="h5 mb-3">Interactive Precision-Recall Curves:</h4>
                                     <p>The PR curves illustrate the trade-off between precision and recall across different classification thresholds. SMOTE (green) maintains better precision across a wider range of recall values compared to other techniques.</p>
                                     <p>This visualization is particularly important in healthcare contexts where the cost of false negatives (missed readmissions) must be balanced against the cost of false positives (unnecessary interventions).</p>
+                                    <p><small>Try hovering over the curves to see exact values at each threshold.</small></p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature Importance Visualization -->
+            <div class="row mb-5">
+                <div class="col-lg-12">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h3 class="h4 mb-4">Feature Importance Analysis</h3>
+                            <p class="mb-4">Understanding which features contribute most to the model's predictions is crucial for both model improvement and clinical interpretation:</p>
+                            
+                            <div id="feature-importance-chart"></div>
+                            
+                            <p class="mt-3">The chart above shows the relative importance of each feature in the final model. Length of stay and age are the strongest predictors of readmission risk, followed by the number of procedures and medications.</p>
                         </div>
                     </div>
                 </div>
@@ -639,20 +1333,20 @@ jobs:
                             <p class="mb-4">Our advanced temporal modeling approach uses a Time-Aware LSTM architecture to capture the sequential nature of clinical data. These visualizations demonstrate the model's performance and training characteristics:</p>
 
                             <div class="row align-items-center">
-                                <div class="col-lg-6">
+                                <div class="col-lg-6" data-aos="fade-right" data-aos-delay="100">
                                     <img src="notebooks/results/time_aware_lstm_roc_pr_curves.png" alt="ROC and PR Curves for Time-Aware LSTM" class="img-fluid rounded shadow mb-4">
                                     <h4 class="h5 mb-3 text-center">ROC and PR Curves</h4>
                                     <p>The ROC curve shows the model's ability to distinguish between readmission and non-readmission cases across different thresholds. The PR curve is particularly informative for imbalanced datasets, showing how precision varies with recall.</p>
                                 </div>
-                                <div class="col-lg-6">
+                                <div class="col-lg-6" data-aos="fade-left" data-aos-delay="200">
                                     <img src="notebooks/results/time_aware_lstm_training_curves.png" alt="Training Curves for Time-Aware LSTM" class="img-fluid rounded shadow mb-4">
                                     <h4 class="h5 mb-3 text-center">Training Curves</h4>
                                     <p>These curves show the model's learning progression during training. The convergence pattern demonstrates how our temporal approach effectively learns from sequential clinical data, with validation metrics stabilizing after sufficient epochs.</p>
                                 </div>
                             </div>
 
-                            <div class="alert alert-info mt-3">
-                                <strong>Process Enabling Reliable Performance:</strong> Our rigorous MLOps pipeline, including automated data validation and versioned experiment tracking (e.g., using MLflow), allowed us to systematically evaluate imbalance techniques and temporal models. While metrics on this subset are illustrative (e.g., AUC-PR ~0.35 for SMOTE-enhanced LightGBM, ~0.40 for Time-Aware LSTM), the process ensures we can reliably reproduce, monitor, and improve these results as data scales. We project significant performance gains (targeting AUC-PR > 0.50) on the full dataset based on literature benchmarks and the capabilities demonstrated here.
+                            <div class="callout mt-4" data-aos="fade-up" data-aos-delay="300"> <!-- Changed from alert -->
+                                <strong>Process Enabling Reliable Performance:</strong> Our rigorous MLOps pipeline, including automated data validation and versioned experiment tracking (e.g., using MLflow), allowed systematic evaluation. <strong>Crucially, the performance metrics shown (e.g., AUC-PR ~0.35-0.40) are derived from the limited MIMIC-III <em>demo</em> dataset and illustrate the <em>process's capability</em>, not definitive real-world performance.</strong> The robust pipeline ensures reproducibility and improvement as data scales (projecting AUC-PR > 0.50 on full data).
                             </div>
                         </div>
                     </div>
@@ -681,13 +1375,15 @@ jobs:
                                  <h4>Fairness Metrics & Results</h4>
                                  <div class="card border-0 shadow-sm mb-3">
                                      <div class="card-body">
-                                         <p><strong>Evaluation:</strong> We evaluated fairness using the <strong>Equalized Odds Difference</strong> metric across the 'gender' attribute.</p>
+                                         <p><strong>Evaluation:</strong> We evaluated fairness using metrics like <strong>Equalized Odds Difference</strong> across the 'gender' attribute to quantify disparities in True Positive Rates between subgroups.</p>
                                          <p><strong>Initial Finding:</strong> The baseline LightGBM model showed a difference of 0.08 in True Positive Rates between male and female subgroups.</p>
                                          <p><strong>Mitigation/Monitoring:</strong> While specific mitigation techniques (like re-weighing or adversarial debiasing) are planned for the full-scale implementation, this metric is actively monitored in our evaluation pipeline. Current focus is on ensuring transparency around existing disparities.</p>
                                          <div class="text-center">
-                                             <!-- Placeholder for a potential bar chart showing metric per group -->
-                                             <img src="docs/images/fairness_placeholder.png" alt="Fairness Metric Example (Placeholder)" class="img-fluid rounded" style="max-height: 180px;">
-                                             <p><small>Example: Equalized Odds Difference across gender</small></p>
+                                             <!-- Replaced placeholder with actual fairness plot -->
+                                             <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/fairness_recall_gender.png">
+                                                 <img src="assets/fairness_recall_gender.png" alt="Fairness Analysis - Recall by Gender" class="img-fluid rounded shadow" style="max-height: 180px;">
+                                             </a>
+                                             <p><small>Example: Recall difference across gender (Click to enlarge)</small></p>
                                          </div>
                                      </div>
                                  </div>
@@ -696,11 +1392,14 @@ jobs:
                                  <h4>Explainability in Action (XAI)</h4>
                                  <div class="card border-0 shadow-sm">
                                      <div class="card-body">
-                                         <p><strong>SHAP Integration:</strong> We integrated <strong>SHAP (SHapley Additive exPlanations)</strong> to provide both local (per-prediction) and global feature importance insights (see <code>src/models/predict_model.py</code>).</p>
+                                         <p><strong>SHAP Integration:</strong> We integrated <strong>SHAP (SHapley Additive exPlanations)</strong> to provide both local (per-prediction) and global feature importance insights, enhancing model transparency.</p>
                                          <p><strong>Value Proposition:</strong> SHAP values allow clinicians to understand the key drivers (e.g., specific lab results, length of stay) contributing to an individual patient's risk score, fostering trust and enabling more informed decision-making.</p>
                                          <div class="text-center">
-                                             <img src="docs/images/shap_summary_placeholder.png" alt="SHAP Summary Plot Example" class="img-fluid rounded" style="max-height: 180px;">
-                                             <p class="mt-2"><small>Example: SHAP summary plot showing global feature importance</small></p>
+                                             <!-- Replaced placeholder with actual SHAP plot -->
+                                             <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/shap_summary_plot.png">
+                                                 <img src="assets/shap_summary_plot.png" alt="SHAP Summary Plot Example" class="img-fluid rounded shadow" style="max-height: 180px;">
+                                             </a>
+                                             <p class="mt-2"><small>Example: SHAP summary plot showing global feature importance (Click to enlarge)</small></p>
                                          </div>
                                      </div>
                                  </div>
@@ -738,6 +1437,7 @@ jobs:
                             <li><strong>Federated Learning:</strong> Investigate federated learning approaches for training models across multiple institutions without sharing raw patient data, addressing privacy concerns.</li>
                             <li><strong>Synthetic Data Augmentation:</strong> Refine the use of synthetic data generation (<code>notebooks/synthetic_data_generator.py</code>) specifically for augmenting underrepresented patient subgroups or rare event scenarios to improve model robustness and fairness.</li>
                         </ul>
+                         <p class="mt-3"><small>See the <a href="FUTURE_WORK.md">Future Work Documentation</a> for more detailed plans on these enhancements.</small></p>
                     </div>
                 </div>
             </div>
@@ -752,6 +1452,41 @@ jobs:
         </div>
     </footer>
 
+    <!-- Image Modal -->
+    <div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="imageModalLabel">Image Preview</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center">
+            <img src="" id="modalImage" class="img-fluid" alt="Enlarged Image">
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var imageModal = document.getElementById('imageModal');
+            var modalImage = document.getElementById('modalImage');
+            var imageLinks = document.querySelectorAll('.image-popup-link');
+
+            imageLinks.forEach(function(link) {
+                link.addEventListener('click', function (event) {
+                    event.preventDefault(); // Prevent default link behavior
+                    var imageSource = this.getAttribute('data-img-src');
+                    var imageAlt = this.querySelector('img').getAttribute('alt'); // Get alt text from inner image
+                    modalImage.setAttribute('src', imageSource);
+                    modalImage.setAttribute('alt', imageAlt); // Set alt text for modal image
+                    // Optional: Update modal title if needed
+                    // var modalTitle = imageModal.querySelector('.modal-title');
+                    // modalTitle.textContent = imageAlt;
+                });
+            });
+        });
+    </script>
 </body>
 </html>

@@ -23,6 +23,30 @@ The focus is on demonstrating:
 
 **The methodology and pipeline architecture are designed to scale effectively to the full MIMIC dataset and real-world EHR systems.**
 
+## Project Status (Using MIMIC-III Demo Data)
+
+This section clarifies the current implementation status of different components within this Proof-of-Concept.
+
+*   **Implemented & Functional:**
+    *   **Core Data Pipeline:** Data loading, preprocessing, feature engineering (`src/data/`, `src/features/`).
+    *   **Imbalance Analysis:** Implementation and comparison of techniques like SMOTE, Class Weights, Oversampling/Undersampling (`src/models/imbalance_analysis.py`).
+    *   **Basic Model Training:** Logistic Regression pipeline training (`src/models/imbalance_analysis.py`).
+    *   **Interpretability:** Basic SHAP plots generation (`src/visualization/generate_shap_plots.py`).
+    *   **Fairness Analysis:** Basic fairness plots generation (e.g., recall by gender) (`src/visualization/generate_fairness_plots.py`).
+    *   **API:** Functional FastAPI endpoint for predictions (`api/`).
+    *   **Dashboard:** Functional Streamlit dashboard for visualization (`dashboard/`).
+    *   **LSTM PoC:** Initial Time-Aware LSTM proof-of-concept developed in a notebook (`notebooks/advanced_temporal_model_poc.ipynb`).
+
+*   **Conceptual / Future Work (Not Fully Implemented):**
+    *   **Advanced Temporal Models:** Full integration and productionization of LSTM or other sequence models.
+    *   **Causal Inference:** Implementation of techniques outlined in [FUTURE_WORK.md](FUTURE_WORK.md).
+    *   **Full CI/CD Automation:** Production-grade GitHub Actions workflows beyond basic linting/testing (e.g., automated deployment, model registry integration).
+    *   **Advanced Monitoring:** Implementation of data/concept drift detection, performance monitoring dashboards (e.g., using tools like Evidently AI).
+    *   **Experiment Tracking Integration:** Full integration with MLflow or similar for comprehensive tracking.
+    *   **Data/Model Versioning:** Full integration with DVC or similar.
+    *   **LLM Integration:** Implementation of LLM-based feature extraction or explanation generation.
+    *   **Scalability Testing:** Performance testing on the full MIMIC dataset.
+
 ## Key Features & Visualizations
 
 *(Note: Plots generated using the MIMIC-III Demo dataset)*

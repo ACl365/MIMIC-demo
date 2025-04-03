@@ -1,23 +1,29 @@
 """
 Utilities for interacting with Large Language Models (LLMs) for explanations.
+
+This module provides functions to format prompts and interact with an LLM
+(currently configured for OpenAI's completion models) to generate human-readable
+summaries based on SHAP feature contributions for a single prediction.
+
+Requires the `openai` library to be installed and the `OPENAI_API_KEY`
+environment variable to be set. If unavailable, functions will return None.
 """
 
 import os
-from typing import List, Optional, Tuple  # Remove Dict, add Optional
+from typing import List, Optional, Tuple, Any # Added Any for openai response type
 
 import numpy as np
 
 # Attempt to import openai, handle if not installed
 try:
     import openai
-
     OPENAI_AVAILABLE = True
-    # Ensure API key is set (consider more robust key management for production)
+    # Check for API key presence during initialization
     if not os.getenv("OPENAI_API_KEY"):
         print(
-            "Warning: OPENAI_API_KEY environment variable not set. LLM explanation will fail."
+            "Warning: OPENAI_API_KEY environment variable not set. LLM explanation feature requires a key."
         )
-        # OPENAI_AVAILABLE = False # Optionally disable if key is mandatory
+        # Consider setting OPENAI_AVAILABLE = False if key is strictly required
 except ImportError:
     OPENAI_AVAILABLE = False
     print(
@@ -32,20 +38,43 @@ logger = get_logger(__name__)
 def format_shap_prompt(
     top_features: List[Tuple[str, float]], prediction_prob: float
 ) -> str:
-    """Formats a prompt for an LLM to explain SHAP contributions."""
+    """
+    Formats a prompt for an LLM to explain SHAP contributions for readmission risk.
+
+    Constructs a detailed prompt explaining the prediction context (readmission probability)
+    and listing the top features influencing the prediction based on their SHAP values.
+    It asks the LLM for a concise, clinician-friendly summary.
+
+    Args:
+        top_features (List[Tuple[str, float]]): A list of tuples, where each tuple contains
+                                                the feature name (str) and its corresponding
+                                                SHAP value (float) for the top N features.
+        prediction_prob (float): The predicted probability of readmission for the patient.
+
+    Returns:
+        str: A formatted prompt string ready to be sent to the LLM.
+    """
 
     prompt = (
         "You are an AI assistant explaining machine learning model predictions to a clinician. "
         "The model predicts the probability of 30-day hospital readmission. "
-        f"For this patient, the predicted probability is {prediction_prob:.2f}.\n\n"
+        f"For this patient, the predicted probability is {prediction_prob:.2f} (where > 0.5 indicates higher risk).\n\n"
         "The top factors influencing this prediction, according to SHAP analysis, are:\n"
     )
     for feature, shap_value in top_features:
+        # Describe impact based on SHAP value sign
         direction = "increases" if shap_value > 0 else "decreases"
-        magnitude = (
-            "significantly" if abs(shap_value) > 0.1 else "slightly"
-        )  # Example threshold
-        prompt += f"- {feature}: {direction} the predicted risk ({magnitude}, SHAP value: {shap_value:.3f})\n"
+        # Describe magnitude (example thresholds, adjust as needed)
+        abs_shap = abs(shap_value)
+        if abs_shap > 0.1:
+            magnitude = "significantly"
+        elif abs_shap > 0.02:
+             magnitude = "moderately"
+        else:
+             magnitude = "slightly"
+        # Clean up feature name for readability
+        clean_feature = feature.replace('_', ' ').title()
+        prompt += f"- {clean_feature}: {magnitude} {direction} the predicted risk (SHAP value: {shap_value:.3f})\n"
 
     prompt += "\nPlease provide a concise, one-sentence explanation summarizing the key drivers of this prediction for a clinician, avoiding technical jargon like 'SHAP value'."
     return prompt
@@ -57,42 +86,51 @@ def explain_shap_with_llm(
     prediction_prob: float,
     top_n: int = 3,
     model_name: str = "gpt-3.5-turbo-instruct",  # Or another suitable completion model
-) -> Optional[
-    str
-]:  # Type hint already uses Optional, no change needed here if import is added
+) -> Optional[str]:
     """
-    Uses an LLM (currently OpenAI) to generate a human-readable explanation
+    Uses an LLM (OpenAI Completion API) to generate a human-readable explanation
     from SHAP values for a single prediction.
 
+    Formats a prompt using `format_shap_prompt` with the top N features based on
+    absolute SHAP values and sends it to the specified OpenAI model.
+
     Args:
-        shap_values_single (np.ndarray): SHAP values for one prediction (1D array).
+        shap_values_single (np.ndarray): 1D NumPy array of SHAP values for one prediction.
         feature_names (List[str]): List of feature names corresponding to shap_values.
-        prediction_prob (float): The predicted probability for this instance.
-        top_n (int): Number of top features to include in the explanation.
-        model_name (str): The specific OpenAI model to use.
+        prediction_prob (float): The predicted probability for this instance (e.g., P(readmission)).
+        top_n (int, optional): Number of top features (by absolute SHAP value) to include
+                               in the prompt. Defaults to 3.
+        model_name (str, optional): The specific OpenAI model ID to use (must be a completion model
+                                    like gpt-3.5-turbo-instruct or text-davinci-003).
+                                    Defaults to "gpt-3.5-turbo-instruct".
 
     Returns:
-        Optional[str]: The explanation text from the LLM, or None if unavailable/error.
+        Optional[str]: The explanation text generated by the LLM, or None if the OpenAI library
+                       is unavailable, the API key is missing, or an API error occurs.
+
+    Raises:
+        ValueError: If the lengths of `shap_values_single` and `feature_names` do not match.
     """
     if not OPENAI_AVAILABLE:
         logger.warning(
-            "OpenAI library not available or API key not set. Cannot generate LLM explanation."
+            "OpenAI library not available. Cannot generate LLM explanation."
         )
         return None
     if not os.getenv("OPENAI_API_KEY"):
-        logger.warning("OPENAI_API_KEY not set. Cannot generate LLM explanation.")
+        logger.warning("OPENAI_API_KEY environment variable not set. Cannot generate LLM explanation.")
         return None
 
     if len(shap_values_single) != len(feature_names):
-        logger.error(
-            f"Mismatch between SHAP values ({len(shap_values_single)}) and feature names ({len(feature_names)})."
-        )
-        return None
+        msg = f"Mismatch between SHAP values ({len(shap_values_single)}) and feature names ({len(feature_names)})."
+        logger.error(msg)
+        raise ValueError(msg)
 
     try:
         # Calculate absolute SHAP values and get indices of top N features
         abs_shap = np.abs(shap_values_single)
-        top_indices = np.argsort(abs_shap)[-top_n:][::-1]  # Indices of top N features
+        # Ensure top_n doesn't exceed the number of features
+        actual_top_n = min(top_n, len(feature_names))
+        top_indices = np.argsort(abs_shap)[-actual_top_n:][::-1]  # Indices of top N features
 
         # Get feature names and their corresponding SHAP values
         top_features = [(feature_names[i], shap_values_single[i]) for i in top_indices]
@@ -108,9 +146,9 @@ def explain_shap_with_llm(
             model=model_name,
             prompt=prompt,
             max_tokens=100,  # Limit response length
-            temperature=0.5,  # Adjust creativity
+            temperature=0.5,  # Adjust creativity/determinism
             n=1,
-            stop=None,  # Let the model decide when to stop
+            stop=None,  # Let the model decide when to stop based on context
         )
 
         explanation = response.choices[0].text.strip()
@@ -122,6 +160,9 @@ def explain_shap_with_llm(
             "OpenAI API key invalid or missing. Cannot generate LLM explanation."
         )
         return None
+    except openai.OpenAIError as api_error: # Catch specific OpenAI errors
+        logger.error(f"OpenAI API error: {api_error}", exc_info=True)
+        return None
     except Exception as e:
-        logger.error(f"Error calling OpenAI API: {e}", exc_info=True)
+        logger.error(f"An unexpected error occurred calling OpenAI API: {e}", exc_info=True)
         return None

@@ -218,6 +218,49 @@ class TestCombineFeatures(unittest.TestCase):
         self.assertEqual(result["gender_m"].isna().sum(), 0)
         self.assertEqual(result["gender_f"].isna().sum(), 0)
 
+    @patch("features.build_features.pd.read_csv")  # Corrected mock path
+    @patch("features.build_features.os.path.exists")  # Corrected mock path
+    @patch("features.build_features.get_data_path")  # Corrected mock path
+    def test_combine_features_empty_clinical(
+        self, mock_get_data_path, mock_exists, mock_read_csv
+     ):
+        """
+        Test _combine_features when clinical features file exists but is empty.
+        """
+        # Configure mocks
+        mock_get_data_path.side_effect = lambda data_type, dataset, config: {
+            ("processed", "admission_data"): "data/processed/admission_data.csv",
+            ("processed", "base_path"): "data/processed/",
+        }[
+            (data_type, dataset)
+        ]
+
+        mock_exists.return_value = True # All files exist
+
+        # Create an empty clinical features DataFrame
+        empty_clinical = pd.DataFrame(columns=self.clinical_features.columns)
+
+        mock_read_csv.side_effect = lambda path, **kwargs: {
+            "data/processed/admission_data.csv": self.admissions,
+            "data/processed/demographic_features.csv": self.demographic_features,
+            "data/processed/clinical_features.csv": empty_clinical, # Return empty DF
+            "data/processed/diagnosis_features.csv": self.diagnosis_features,
+        }[path]
+
+        # Call the function
+        result = _combine_features(self.config)
+
+        # Assertions
+        self.assertEqual(len(result), 3)  # Should still have 3 rows from admissions
+        self.assertIn("subject_id", result.columns)
+        self.assertIn("hadm_id", result.columns)
+        self.assertIn("age", result.columns)
+        # Clinical features should NOT be present as the merge input was empty
+        self.assertNotIn("heart_rate_mean", result.columns)
+        self.assertNotIn("sbp_mean", result.columns)
+        self.assertNotIn("glucose_mean", result.columns)
+        self.assertIn("infectious", result.columns) # Diagnosis features should still be there
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,35 +1,38 @@
 """
 Script to analyse and compare different imbalance handling techniques for the readmission model.
 
-This script implements and compares the following techniques:
-1. Baseline (no imbalance handling)
-2. Class weights (class_weight='balanced')
-3. Random oversampling
-4. SMOTE (Synthetic Minority Over-sampling Technique)
-5. Random undersampling
+This script loads processed data, preprocesses it for the readmission task,
+and then trains and evaluates a Logistic Regression model using several
+imbalance handling strategies implemented via `imblearn` pipelines:
 
-For each technique, it generates:
-- PR curves
-- F1 scores
-- Precision
-- Recall
-- PR AUC
-- Confusion Matrix (for a selected technique)
-- Calibration Curve (for a selected technique)
-- Feature Coefficients (for a selected technique)
-- Feature Distribution plot (for a selected feature, if found)
+1.  **Baseline:** No explicit imbalance handling.
+2.  **Class Weights:** Uses `class_weight='balanced'` in Logistic Regression.
+3.  **Random Oversampling:** Uses `RandomOverSampler`.
+4.  **SMOTE:** Uses `SMOTE` (Synthetic Minority Over-sampling Technique).
+5.  **Random Undersampling:** Uses `RandomUnderSampler`.
 
-It also saves the fitted pipeline for the selected technique for later use (e.g., SHAP analysis).
+For each technique, it performs cross-validation to calculate and log metrics:
+- Precision, Recall, F1-score, PR AUC
 
-All metrics are computed using cross-validation to ensure robust evaluation.
-Plots are saved to the 'assets' directory.
-MLflow is used to log parameters, metrics, and artifacts.
+It generates and saves comparison plots:
+- Precision-Recall Curves (`imbalance_pr_curves.png`)
+- Bar chart comparing key metrics (`imbalance_metrics_comparison.png`)
+
+Additionally, for a selected 'best' technique (defaulting to 'Class Weights' or the
+first successful one), it generates and saves detailed plots:
+- Confusion Matrix (`confusion_matrix_<technique>.png`)
+- Calibration Curve (`calibration_curve_<technique>.png`)
+- Feature Coefficients (if applicable) (`feature_coefficients_<technique>.png`)
+
+The script also saves the evaluation results to a CSV file (`imbalance_analysis_results.csv`)
+and logs parameters, metrics, and plot artifacts to MLflow.
 """
 
 import argparse
 import os
 import pickle
 import subprocess
+import logging # Import logging for type hint
 from typing import Any, Dict, List, Optional, Tuple
 
 import matplotlib.pyplot as plt
@@ -38,7 +41,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from imblearn.over_sampling import SMOTE, RandomOverSampler
-from imblearn.pipeline import Pipeline
+from imblearn.pipeline import Pipeline as ImbPipeline # Alias to avoid confusion
 from imblearn.under_sampling import RandomUnderSampler
 from sklearn.calibration import CalibrationDisplay
 from sklearn.linear_model import LogisticRegression
@@ -51,6 +54,7 @@ from sklearn.metrics import (
     recall_score,
 )
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from sklearn.preprocessing import StandardScaler # Needed for pipelines
 
 from src.models.model import ReadmissionModel
 from src.utils import get_data_path, get_logger, get_project_root, load_config
@@ -60,7 +64,7 @@ logger = get_logger(__name__)
 
 # Helper function to get git hash (same as in train_model.py)
 def get_git_revision_hash() -> str:
-    """Gets the current git commit hash."""
+    """Gets the current git commit hash of the repository."""
     try:
         return (
             subprocess.check_output(["git", "rev-parse", "HEAD"])
@@ -74,108 +78,123 @@ def get_git_revision_hash() -> str:
 
 def load_data() -> pd.DataFrame:
     """
-    Load the processed data for analysis.
+    Load the combined features data used for model training.
 
     Returns:
-        pd.DataFrame: The processed data
+        pd.DataFrame: The combined features DataFrame.
+
+    Raises:
+        FileNotFoundError: If the combined features file is not found.
     """
     config = load_config()
     data_path = get_data_path("processed", "combined_features", config)
     logger.info(f"Loading data from {data_path}")
+    if not os.path.exists(data_path):
+        logger.error(f"Data file not found at {data_path}")
+        raise FileNotFoundError(f"Data file not found: {data_path}")
     data = pd.read_csv(data_path)
+    logger.info(f"Data loaded successfully. Shape: {data.shape}")
     return data
 
 
 def preprocess_data(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     """
-    Preprocess the data for modelling.
+    Preprocess the loaded data using the ReadmissionModel's preprocess method.
+
+    Handles feature selection, imputation, and target extraction based on the
+    model's configuration. Logs the class distribution of the target variable.
 
     Args:
-        data (pd.DataFrame): The input data
+        data (pd.DataFrame): The input DataFrame (combined features).
 
     Returns:
-        Tuple[pd.DataFrame, pd.Series]: The preprocessed features and target
+        Tuple[pd.DataFrame, pd.Series]: A tuple containing:
+            - X (pd.DataFrame): The preprocessed feature matrix.
+            - y (pd.Series): The target variable Series.
+            Returns empty DataFrame/Series if preprocessing fails or target is missing.
     """
     # Initialize a readmission model to use its preprocessing logic
+    # Assumes default config is sufficient for preprocessing steps needed here
     model = ReadmissionModel()
     X, y = model.preprocess(data)
 
     # Log class distribution
-    if y is not None:  # Check if y is not None before using value_counts
+    if y is not None and not y.empty:
         class_counts = y.value_counts()
         total = len(y)
-        logger.info(f"Class distribution:")
+        logger.info(f"Class distribution (Target: {model.target}):")
         for cls, count in class_counts.items():
             logger.info(f"  Class {cls}: {count} ({count/total:.2%})")
     else:
-        logger.warning("Target variable 'y' is None after preprocessing.")
+        logger.warning("Target variable 'y' is None or empty after preprocessing.")
         # Return empty DataFrame/Series if preprocessing failed to produce target
         return pd.DataFrame(), pd.Series(dtype="float64")
+
+    # Scale features (important before applying sampling techniques)
+    logger.info("Scaling features using StandardScaler...")
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    X = pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
+    logger.info("Features scaled.")
 
     return X, y
 
 
-def create_imbalance_pipelines(random_state: int = 42) -> Dict[str, Any]:
+def create_imbalance_pipelines(random_state: int = 42) -> Dict[str, ImbPipeline]:
     """
-    Create pipelines for different imbalance handling techniques.
+    Create scikit-learn/imblearn pipelines for different imbalance handling techniques.
+
+    Each pipeline includes a StandardScaler and a Logistic Regression classifier.
+    Sampling techniques (Oversampling, SMOTE, Undersampling) are added before the classifier.
 
     Args:
-        random_state (int, optional): Random state for reproducibility. Defaults to 42.
+        random_state (int, optional): Random state for reproducibility of sampling and classifier.
+                                      Defaults to 42.
 
     Returns:
-        Dict[str, Any]: Dictionary of pipelines
+        Dict[str, ImbPipeline]: A dictionary where keys are technique names (e.g., "Baseline", "SMOTE")
+                                and values are the corresponding imblearn Pipeline objects.
     """
-    # Base classifier
-    # Increase max_iter to help with convergence warnings
-    # base_clf = LogisticRegression(max_iter=2000, random_state=random_state) # Unused variable
+    # Base classifier configuration
+    lr_config = {
+        "max_iter": 2000, # Increased for convergence
+        "random_state": random_state,
+        "solver": "liblinear" # Often good with L1/L2
+    }
 
     # Create pipelines
     pipelines = {
-        "Baseline": Pipeline(
+        "Baseline": ImbPipeline(
             [
-                (
-                    "classifier",
-                    LogisticRegression(max_iter=2000, random_state=random_state),
-                )
+                ("scaler", StandardScaler()), # Add scaler to each pipeline
+                ("classifier", LogisticRegression(**lr_config)),
             ]
         ),
-        "Class Weights": Pipeline(
+        "Class Weights": ImbPipeline(
             [
-                (
-                    "classifier",
-                    LogisticRegression(
-                        max_iter=2000,
-                        class_weight="balanced",
-                        random_state=random_state,
-                    ),
-                )
+                ("scaler", StandardScaler()),
+                ("classifier", LogisticRegression(**lr_config, class_weight="balanced")),
             ]
         ),
-        "Random Oversampling": Pipeline(
+        "Random Oversampling": ImbPipeline(
             [
+                ("scaler", StandardScaler()),
                 ("sampler", RandomOverSampler(random_state=random_state)),
-                (
-                    "classifier",
-                    LogisticRegression(max_iter=2000, random_state=random_state),
-                ),
+                ("classifier", LogisticRegression(**lr_config)),
             ]
         ),
-        "SMOTE": Pipeline(
+        "SMOTE": ImbPipeline(
             [
+                ("scaler", StandardScaler()),
                 ("sampler", SMOTE(random_state=random_state)),
-                (
-                    "classifier",
-                    LogisticRegression(max_iter=2000, random_state=random_state),
-                ),
+                ("classifier", LogisticRegression(**lr_config)),
             ]
         ),
-        "Random Undersampling": Pipeline(
+        "Random Undersampling": ImbPipeline(
             [
+                ("scaler", StandardScaler()),
                 ("sampler", RandomUnderSampler(random_state=random_state)),
-                (
-                    "classifier",
-                    LogisticRegression(max_iter=2000, random_state=random_state),
-                ),
+                ("classifier", LogisticRegression(**lr_config)),
             ]
         ),
     }
@@ -186,27 +205,37 @@ def create_imbalance_pipelines(random_state: int = 42) -> Dict[str, Any]:
 def evaluate_pipelines(
     X: pd.DataFrame,
     y: pd.Series,
-    pipelines: Dict[str, Any],
+    pipelines: Dict[str, ImbPipeline],
     cv_folds: int = 5,
     random_state: int = 42,
-) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, ImbPipeline]]:
     """
-    Evaluate the pipelines using cross-validation.
+    Evaluate multiple imblearn pipelines using stratified cross-validation.
+
+    Calculates predictions, probabilities, and various performance metrics
+    (Precision, Recall, F1, PR AUC) for each pipeline. Also fits each pipeline
+    on the full dataset for later analysis (e.g., coefficients).
 
     Args:
-        X (pd.DataFrame): Features
-        y (pd.Series): Target
-        pipelines (Dict[str, Any]): Dictionary of pipelines
+        X (pd.DataFrame): Preprocessed and scaled features.
+        y (pd.Series): Target variable.
+        pipelines (Dict[str, ImbPipeline]): Dictionary of pipelines to evaluate.
         cv_folds (int, optional): Number of cross-validation folds. Defaults to 5.
         random_state (int, optional): Random state for reproducibility. Defaults to 42.
 
     Returns:
-        Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
-            - Dictionary of evaluation results
-            - Dictionary of fitted pipelines for each technique (trained on full data)
+        Tuple[Dict[str, Dict[str, Any]], Dict[str, ImbPipeline]]:
+            - results (Dict[str, Dict[str, Any]]): A dictionary where keys are pipeline names.
+              Each value is another dictionary containing metrics ('precision', 'recall', 'f1', 'pr_auc'),
+              cross-validated predictions ('y_pred', 'y_prob'), raw curve data
+              ('precision_curve', 'recall_curve', 'thresholds'), a 'success' flag,
+              and the fitted pipeline object ('pipeline'). Includes a '_meta' key indicating
+              if any pipeline succeeded overall.
+            - fitted_pipelines (Dict[str, ImbPipeline]): A dictionary containing pipelines
+              fitted on the full training data.
     """
-    results = {}
-    fitted_pipelines = {}  # Store pipelines fitted on the full data
+    results: Dict[str, Dict[str, Any]] = {}
+    fitted_pipelines: Dict[str, ImbPipeline] = {} # Store pipelines fitted on the full data
     cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
 
     # Flag to track if any pipeline succeeded
@@ -217,13 +246,13 @@ def evaluate_pipelines(
 
         # Initialize results dictionary for this pipeline
         results[name] = {
-            "y_true": y,
+            "y_true": y.to_numpy(), # Store numpy array for consistency
             "y_pred": None,
             "y_prob": None,
-            "precision": None,
-            "recall": None,
-            "f1": None,
-            "pr_auc": None,
+            "precision": np.nan,
+            "recall": np.nan,
+            "f1": np.nan,
+            "pr_auc": np.nan,
             "precision_curve": None,
             "recall_curve": None,
             "thresholds": None,
@@ -233,8 +262,12 @@ def evaluate_pipelines(
 
         # Get cross-validated predictions and probabilities
         try:
-            y_pred = cross_val_predict(pipeline, X, y, cv=cv)
-            y_prob = cross_val_predict(pipeline, X, y, cv=cv, method="predict_proba")[
+            # Ensure X and y are numpy arrays for cross_val_predict if needed, though it often handles DataFrames
+            X_np = X.values if isinstance(X, pd.DataFrame) else X
+            y_np = y.values if isinstance(y, pd.Series) else y
+
+            y_pred = cross_val_predict(pipeline, X_np, y_np, cv=cv, n_jobs=-1)
+            y_prob = cross_val_predict(pipeline, X_np, y_np, cv=cv, method="predict_proba", n_jobs=-1)[
                 :, 1
             ]
 
@@ -242,18 +275,18 @@ def evaluate_pipelines(
             results[name]["y_pred"] = y_pred
             results[name]["y_prob"] = y_prob
             results[name]["precision"] = precision_score(
-                y, y_pred, zero_division=0
-            )  # Added zero_division
+                y_np, y_pred, zero_division=0
+            )
             results[name]["recall"] = recall_score(
-                y, y_pred, zero_division=0
-            )  # Added zero_division
+                y_np, y_pred, zero_division=0
+            )
             results[name]["f1"] = f1_score(
-                y, y_pred, zero_division=0
-            )  # Added zero_division
-            results[name]["pr_auc"] = average_precision_score(y, y_prob)
+                y_np, y_pred, zero_division=0
+            )
+            results[name]["pr_auc"] = average_precision_score(y_np, y_prob)
 
             # Calculate precision-recall curve
-            precision, recall, thresholds = precision_recall_curve(y, y_prob)
+            precision, recall, thresholds = precision_recall_curve(y_np, y_prob)
             results[name]["precision_curve"] = precision
             results[name]["recall_curve"] = recall
             results[name]["thresholds"] = thresholds
@@ -270,7 +303,7 @@ def evaluate_pipelines(
             # Fit the pipeline on the full data for coefficient extraction etc.
             try:
                 logger.info(f"  Fitting {name} on full data...")
-                pipeline.fit(X, y)
+                pipeline.fit(X_np, y_np)
                 fitted_pipelines[name] = pipeline
                 results[name][
                     "pipeline"
@@ -280,6 +313,7 @@ def evaluate_pipelines(
                 logger.error(f"  Error fitting {name} on full data: {str(fit_e)}")
                 # Mark as failed if fitting on full data fails, even if CV worked
                 results[name]["success"] = False
+                # Recalculate any_success based on current results status
                 any_success = any(
                     res.get("success", False)
                     for res_name, res in results.items()
@@ -290,6 +324,7 @@ def evaluate_pipelines(
             logger.error(f"Error evaluating {name} during cross-validation: {str(e)}")
             # Ensure success is False if CV fails
             results[name]["success"] = False
+            # Recalculate any_success based on current results status
             any_success = any(
                 res.get("success", False)
                 for res_name, res in results.items()
@@ -312,84 +347,75 @@ def plot_pr_curves(
     results: Dict[str, Dict[str, Any]], save_path: Optional[str] = None
 ) -> None:
     """
-    Plot precision-recall curves for all pipelines.
+    Plot precision-recall curves for all successfully evaluated pipelines.
 
     Args:
-        results (Dict[str, Dict[str, Any]]): Dictionary of evaluation results
-        save_path (Optional[str], optional): Path to save the plot. If None, the plot is displayed.
-            Defaults to None.
+        results (Dict[str, Dict[str, Any]]): Dictionary of evaluation results from `evaluate_pipelines`.
+        save_path (Optional[str], optional): Path to save the plot image. If None, displays the plot.
+                                             Defaults to None.
     """
     # Check if any pipeline succeeded
     if "_meta" in results and not results["_meta"]["any_success"]:
         logger.warning("No successful pipelines to plot PR curves for.")
-
-        # Create a simple plot with a message
-        fig, ax = plt.subplots(figsize=(10, 8))
-        ax.text(
-            0.5,
-            0.5,
-            "No successful pipelines to compare.\nCheck logs for error details.",
-            ha="center",
-            va="center",
-            fontsize=14,
-        )
-        ax.set_axis_off()
-
+        # Optionally create an empty plot with a message if saving
         if save_path:
+            fig, ax = plt.subplots(figsize=(10, 8))
+            ax.text(0.5, 0.5, "No successful pipelines to compare.", ha="center", va="center", fontsize=14)
+            ax.set_axis_off()
             plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            logger.info(f"Saved empty PR curve plot to {save_path}")
-        else:
-            plt.show()
-        plt.close(fig)
+            logger.info(f"Saved empty PR curve plot placeholder to {save_path}")
+            plt.close(fig)
         return
 
     plt.figure(figsize=(10, 8))
-
-    # Flag to track if any curves were plotted
     any_curves_plotted = False
 
     for name, result in results.items():
-        # Skip the _meta entry
-        if name == "_meta":
-            continue
+        if name == "_meta": continue # Skip metadata entry
 
         if (
             result.get("success", False)
-            and result["precision_curve"] is not None
-            and result["recall_curve"] is not None
+            and result.get("precision_curve") is not None
+            and result.get("recall_curve") is not None
+            and result.get("pr_auc") is not None
         ):
             plt.plot(
                 result["recall_curve"],
                 result["precision_curve"],
                 label=f"{name} (PR AUC = {result['pr_auc']:.3f})",
+                lw=2 # Line width
             )
             any_curves_plotted = True
+        elif result.get("success", False):
+             logger.warning(f"Pipeline '{name}' succeeded but missing curve data for plotting.")
+
 
     if not any_curves_plotted:
-        logger.warning(
-            "No PR curves to plot. All pipelines failed or had missing data."
-        )
-        plt.clf()  # Clear the figure
-        fig, ax = plt.subplots(figsize=(10, 8))
-        ax.text(
-            0.5,
-            0.5,
-            "No PR curves to plot.\nAll pipelines failed or had missing data.",
-            ha="center",
-            va="center",
-            fontsize=14,
-        )
-        ax.set_axis_off()
-    else:
-        plt.xlabel("Recall")
-        plt.ylabel("Precision")
-        plt.title("Precision-Recall Curves for Different Imbalance Handling Techniques")
-        plt.legend(loc="best")
-        plt.grid(True)
+        logger.warning("No valid PR curves generated to plot.")
+        plt.close() # Close the empty figure
+        # Optionally save an empty plot placeholder
+        if save_path:
+            fig, ax = plt.subplots(figsize=(10, 8))
+            ax.text(0.5, 0.5, "No valid PR curves generated.", ha="center", va="center", fontsize=14)
+            ax.set_axis_off()
+            plt.savefig(save_path, dpi=300, bbox_inches="tight")
+            logger.info(f"Saved empty PR curve plot placeholder to {save_path}")
+            plt.close(fig)
+        return
+
+    # Finalize plot
+    plt.xlabel("Recall (Sensitivity)")
+    plt.ylabel("Precision (PPV)")
+    plt.title("Precision-Recall Curves for Imbalance Handling Techniques")
+    plt.legend(loc="lower left") # Often better for PR curves
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05]) # Allow space for labels
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         logger.info(f"Saved PR curve plot to {save_path}")
+        mlflow.log_artifact(save_path) # Log plot to MLflow
     else:
         plt.show()
     plt.close()  # Close the figure
@@ -399,35 +425,24 @@ def plot_metrics_comparison(
     results: Dict[str, Dict[str, Any]], save_path: Optional[str] = None
 ) -> None:
     """
-    Plot a comparison of metrics for all pipelines.
+    Plot a bar chart comparing key metrics (Precision, Recall, F1, PR AUC)
+    across all successfully evaluated pipelines.
 
     Args:
-        results (Dict[str, Dict[str, Any]]): Dictionary of evaluation results
-        save_path (Optional[str], optional): Path to save the plot. If None, the plot is displayed.
-            Defaults to None.
+        results (Dict[str, Dict[str, Any]]): Dictionary of evaluation results.
+        save_path (Optional[str], optional): Path to save the plot image. If None, displays the plot.
+                                             Defaults to None.
     """
     # Check if any pipeline succeeded
     if "_meta" in results and not results["_meta"]["any_success"]:
         logger.warning("No successful pipelines to plot metrics for.")
-
-        # Create a simple plot with a message
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.text(
-            0.5,
-            0.5,
-            "No successful pipelines to compare.\nCheck logs for error details.",
-            ha="center",
-            va="center",
-            fontsize=14,
-        )
-        ax.set_axis_off()
-
         if save_path:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.text(0.5, 0.5, "No successful pipelines to compare.", ha="center", va="center", fontsize=14)
+            ax.set_axis_off()
             plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            logger.info(f"Saved empty metrics comparison plot to {save_path}")
-        else:
-            plt.show()
-        plt.close(fig)
+            logger.info(f"Saved empty metrics comparison plot placeholder to {save_path}")
+            plt.close(fig)
         return
 
     # Filter out the _meta entry and any failed pipelines
@@ -438,597 +453,401 @@ def plot_metrics_comparison(
     ]
 
     if not pipeline_names:
-        logger.warning("No successful pipelines to plot metrics for.")
-
-        # Create a simple plot with a message
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.text(
-            0.5,
-            0.5,
-            "No successful pipelines to compare.\nCheck logs for error details.",
-            ha="center",
-            va="center",
-            fontsize=14,
-        )
-        ax.set_axis_off()
-
+        logger.warning("No successful pipelines found to plot metrics for.")
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            logger.info(f"Saved empty metrics comparison plot to {save_path}")
-        else:
-            plt.show()
-        plt.close(fig)
+             fig, ax = plt.subplots(figsize=(10, 6))
+             ax.text(0.5, 0.5, "No successful pipelines found.", ha="center", va="center", fontsize=14)
+             ax.set_axis_off()
+             plt.savefig(save_path, dpi=300, bbox_inches="tight")
+             logger.info(f"Saved empty metrics comparison plot placeholder to {save_path}")
+             plt.close(fig)
         return
 
-    metrics = ["precision", "recall", "f1", "pr_auc"]
+    metrics_to_plot = ["precision", "recall", "f1", "pr_auc"]
 
-    # Extract metrics for each pipeline
+    # Extract metrics for each successful pipeline, handling potential missing values
     metric_values = {
-        metric: [results[name][metric] for name in pipeline_names] for metric in metrics
+        metric: [results[name].get(metric, np.nan) for name in pipeline_names]
+        for metric in metrics_to_plot
     }
 
+    # Create DataFrame for easier plotting
+    metrics_df = pd.DataFrame(metric_values, index=pipeline_names)
+
     # Create the plot
-    fig, ax = plt.subplots(figsize=(12, 8))
+    ax = metrics_df.plot(kind='bar', figsize=(12, 8), rot=45, width=0.8)
 
-    x = np.arange(len(pipeline_names))
-    width = 0.2
-    multiplier = 0
-
-    for metric, values in metric_values.items():
-        offset = width * multiplier
-        rects = ax.bar(x + offset, values, width, label=metric.upper())
-        ax.bar_label(rects, fmt="{:.2f}", padding=3)
-        multiplier += 1
-
+    # Add labels and title
     ax.set_ylabel("Score")
     ax.set_title("Comparison of Metrics Across Imbalance Handling Techniques")
-    ax.set_xticks(x + width * 1.5, pipeline_names)  # Adjust x-ticks position
-    ax.legend(loc="upper left", bbox_to_anchor=(1, 1))
-    ax.set_ylim(0, 1)
+    ax.set_xlabel("Technique")
+    ax.legend(title="Metrics", bbox_to_anchor=(1.05, 1), loc='upper left')
+    ax.set_ylim(0, max(1.0, metrics_df.max().max() * 1.1)) # Adjust ylim dynamically
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Add value labels on bars
+    for container in ax.containers:
+        ax.bar_label(container, fmt="{:.2f}", label_type='edge', padding=2)
 
     plt.tight_layout()
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         logger.info(f"Saved metrics comparison plot to {save_path}")
+        mlflow.log_artifact(save_path) # Log plot to MLflow
     else:
         plt.show()
-    plt.close(fig)
+    plt.close() # Close the figure
 
 
 def save_results_to_csv(results: Dict[str, Dict[str, Any]], save_path: str) -> None:
     """
-    Save the evaluation results to a CSV file.
+    Save the calculated metrics to a CSV file.
 
     Args:
-        results (Dict[str, Dict[str, Any]]): Dictionary of evaluation results
-        save_path (str): Path to save the CSV file
+        results (Dict[str, Dict[str, Any]]): Dictionary of evaluation results.
+        save_path (str): Path to save the CSV file.
     """
-    # Check if any pipeline succeeded
-    if "_meta" in results and not results["_meta"]["any_success"]:
-        logger.warning("No successful pipelines to save results for.")
+    metrics_to_save = ["precision", "recall", "f1", "pr_auc"]
+    summary_data = []
 
-        # Create a simple CSV with a message
-        df = pd.DataFrame(
-            [
-                {
-                    "Technique": "No successful pipelines",
-                    "Precision": None,
-                    "Recall": None,
-                    "F1": None,
-                    "PR_AUC": None,
-                }
-            ]
-        )
-    else:
-        # Filter out the _meta entry and any failed pipelines
-        valid_results = {
-            name: res
-            for name, res in results.items()
-            if name != "_meta" and res.get("success", False)
-        }
+    for name, result in results.items():
+        if name == "_meta" or not result.get("success", False):
+            continue
+        row = {"Technique": name}
+        for metric in metrics_to_save:
+            row[metric.upper()] = result.get(metric)
+        summary_data.append(row)
 
-        if not valid_results:
-            logger.warning("No successful pipelines to save results for.")
-            df = pd.DataFrame(
-                [
-                    {
-                        "Technique": "No successful pipelines",
-                        "Precision": None,
-                        "Recall": None,
-                        "F1": None,
-                        "PR_AUC": None,
-                    }
-                ]
-            )
-        else:
-            # Prepare data for DataFrame
-            data_for_df = []
-            for name, result in valid_results.items():
-                data_for_df.append(
-                    {
-                        "Technique": name,
-                        "Precision": result.get("precision"),
-                        "Recall": result.get("recall"),
-                        "F1": result.get("f1"),
-                        "PR_AUC": result.get("pr_auc"),
-                    }
-                )
-            df = pd.DataFrame(data_for_df)
+    if not summary_data:
+        logger.warning("No successful results to save to CSV.")
+        return
 
-    # Save to CSV
+    summary_df = pd.DataFrame(summary_data)
     try:
-        df.to_csv(save_path, index=False)
-        logger.info(f"Saved evaluation results to {save_path}")
+        summary_df.to_csv(save_path, index=False, float_format="%.4f")
+        logger.info(f"Saved evaluation summary to {save_path}")
+        mlflow.log_artifact(save_path) # Log CSV to MLflow
     except Exception as e:
-        logger.error(f"Error saving results to CSV {save_path}: {e}")
+        logger.error(f"Failed to save results CSV to {save_path}: {e}", exc_info=True)
 
 
 def plot_confusion_matrix(
-    y_true: pd.Series, y_pred: np.ndarray, save_path: Optional[str] = None
+    y_true: np.ndarray, y_pred: np.ndarray, technique_name: str, save_path: Optional[str] = None
 ) -> None:
     """
-    Plot the confusion matrix.
+    Plot and save the confusion matrix.
 
     Args:
-        y_true (pd.Series): True labels
-        y_pred (np.ndarray): Predicted labels
-        save_path (Optional[str], optional): Path to save the plot. If None, the plot is displayed.
-            Defaults to None.
+        y_true (np.ndarray): True labels.
+        y_pred (np.ndarray): Predicted labels.
+        technique_name (str): Name of the technique for the title and filename.
+        save_path (Optional[str], optional): Path to save the plot. If None, displays the plot.
+                                             Defaults to None.
     """
     cm = confusion_matrix(y_true, y_pred)
     plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-    plt.title("Confusion Matrix")
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues",
+                xticklabels=["Predicted Non-Readmit", "Predicted Readmit"],
+                yticklabels=["Actual Non-Readmit", "Actual Readmit"])
+    plt.title(f"Confusion Matrix - {technique_name}")
+    plt.ylabel("Actual Label")
     plt.xlabel("Predicted Label")
-    plt.ylabel("True Label")
+    plt.tight_layout()
 
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         logger.info(f"Saved confusion matrix plot to {save_path}")
+        mlflow.log_artifact(save_path)
     else:
         plt.show()
     plt.close()
 
 
 def plot_calibration_curve(
-    pipeline: Any,
-    X: pd.DataFrame,
-    y_true: pd.Series,
-    technique_name: str,
-    save_path: Optional[str] = None,
+    y_true: np.ndarray, y_prob: np.ndarray, technique_name: str, save_path: Optional[str] = None
 ) -> None:
     """
-    Plot the calibration curve for a fitted pipeline.
+    Plot and save the calibration curve.
 
     Args:
-        pipeline (Any): The fitted pipeline (must have predict_proba method)
-        X (pd.DataFrame): Features
-        y_true (pd.Series): True labels
-        technique_name (str): Name of the technique being plotted
-        save_path (Optional[str], optional): Path to save the plot. If None, the plot is displayed.
-            Defaults to None.
+        y_true (np.ndarray): True labels.
+        y_prob (np.ndarray): Predicted probabilities for the positive class.
+        technique_name (str): Name of the technique for the title and filename.
+        save_path (Optional[str], optional): Path to save the plot. If None, displays the plot.
+                                             Defaults to None.
     """
-    try:
-        # Check if the final step (classifier) has predict_proba
-        if not hasattr(pipeline.steps[-1][1], "predict_proba"):
-            logger.warning(
-                f"Classifier in pipeline '{technique_name}' does not support predict_proba. Skipping calibration curve."
-            )
-            return
+    plt.figure(figsize=(10, 8))
+    disp = CalibrationDisplay.from_predictions(y_true, y_prob, n_bins=10, name=technique_name)
+    plt.title(f"Calibration Curve - {technique_name}")
+    plt.grid(True, linestyle='--', alpha=0.6)
+    plt.tight_layout()
 
-        y_prob = pipeline.predict_proba(X)[:, 1]
-
-        plt.figure(figsize=(10, 8))
-        disp = CalibrationDisplay.from_predictions(
-            y_true, y_prob, n_bins=10, name=technique_name
-        )
-        disp.plot()  # Use the plot method of the display object
-
-        plt.title(f"Calibration Curve for {technique_name}")
-        plt.grid(True)
-
-        if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            logger.info(f"Saved calibration curve plot to {save_path}")
-        else:
-            plt.show()
-        plt.close()
-
-    except Exception as e:
-        logger.error(f"Error plotting calibration curve for {technique_name}: {e}")
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        logger.info(f"Saved calibration curve plot to {save_path}")
+        mlflow.log_artifact(save_path)
+    else:
+        plt.show()
+    plt.close()
 
 
 def plot_feature_coefficients(
-    classifier: Any, feature_names: List[str], save_path: Optional[str] = None
+    pipeline: ImbPipeline, feature_names: List[str], technique_name: str, top_n: int = 20, save_path: Optional[str] = None
 ) -> None:
     """
-    Plot feature coefficients for a linear model.
+    Plot the feature coefficients/importances of the classifier in the pipeline.
 
     Args:
-        classifier (Any): The fitted linear classifier (must have .coef_ attribute)
-        feature_names (List[str]): List of feature names
-        save_path (Optional[str], optional): Path to save the plot. If None, the plot is displayed.
-            Defaults to None.
+        pipeline (ImbPipeline): The fitted pipeline containing the classifier.
+        feature_names (List[str]): List of feature names corresponding to the input data.
+        technique_name (str): Name of the technique for the title and filename.
+        top_n (int, optional): Number of top features to display. Defaults to 20.
+        save_path (Optional[str], optional): Path to save the plot. If None, displays the plot.
+                                             Defaults to None.
     """
-    if not hasattr(classifier, "coef_"):
-        logger.warning(
-            "Classifier does not have 'coef_' attribute. Skipping feature coefficients plot."
-        )
-        return
-
     try:
-        coefficients = classifier.coef_[0]
-        coef_df = pd.DataFrame({"Feature": feature_names, "Coefficient": coefficients})
-        coef_df = coef_df.sort_values(by="Coefficient", ascending=False)
+        classifier = pipeline.named_steps['classifier']
+        if hasattr(classifier, 'coef_'):
+            coefficients = classifier.coef_[0] # Assuming binary classification
+            importance_df = pd.DataFrame({'Feature': feature_names, 'Coefficient': coefficients})
+            importance_df['Absolute Coefficient'] = importance_df['Coefficient'].abs()
+            importance_df = importance_df.sort_values('Absolute Coefficient', ascending=False).head(top_n)
 
-        # Plot top N and bottom N features for clarity
-        top_n = 15
-        bottom_n = 15
-        if len(coef_df) > top_n + bottom_n:
-            plot_df = pd.concat([coef_df.head(top_n), coef_df.tail(bottom_n)])
-            title = f"Top {top_n} and Bottom {bottom_n} Feature Coefficients"
+            plt.figure(figsize=(10, max(6, top_n // 2))) # Adjust height based on N
+            sns.barplot(x='Coefficient', y='Feature', data=importance_df, palette='viridis')
+            plt.title(f'Top {top_n} Feature Coefficients - {technique_name}')
+            plt.tight_layout()
+
+            if save_path:
+                plt.savefig(save_path, dpi=300, bbox_inches="tight")
+                logger.info(f"Saved feature coefficients plot to {save_path}")
+                mlflow.log_artifact(save_path)
+            else:
+                plt.show()
+            plt.close()
+
+        elif hasattr(classifier, 'feature_importances_'):
+             importances = classifier.feature_importances_
+             importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
+             importance_df = importance_df.sort_values('Importance', ascending=False).head(top_n)
+
+             plt.figure(figsize=(10, max(6, top_n // 2)))
+             sns.barplot(x='Importance', y='Feature', data=importance_df, palette='viridis')
+             plt.title(f'Top {top_n} Feature Importances - {technique_name}')
+             plt.tight_layout()
+
+             if save_path:
+                 plt.savefig(save_path, dpi=300, bbox_inches="tight")
+                 logger.info(f"Saved feature importances plot to {save_path}")
+                 mlflow.log_artifact(save_path)
+             else:
+                 plt.show()
+             plt.close()
         else:
-            plot_df = coef_df
-            title = "Feature Coefficients"
-
-        plt.figure(
-            figsize=(12, max(8, len(plot_df) * 0.3))
-        )  # Adjust height based on number of features
-        sns.barplot(x="Coefficient", y="Feature", data=plot_df, palette="viridis")
-        plt.title(title)
-        plt.tight_layout()
-
-        if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            logger.info(f"Saved feature coefficients plot to {save_path}")
-        else:
-            plt.show()
-        plt.close()
+            logger.warning(f"Classifier for {technique_name} has no 'coef_' or 'feature_importances_' attribute.")
 
     except Exception as e:
-        logger.error(f"Error plotting feature coefficients: {e}")
+        logger.error(f"Error plotting feature coefficients/importances for {technique_name}: {e}", exc_info=True)
 
 
 def plot_feature_distribution(
-    X: pd.DataFrame,
-    y: pd.Series,
-    feature_name: str,
-    technique_name: str,
-    save_path: Optional[str] = None,
+    X: pd.DataFrame, y: pd.Series, feature_name: str, technique_name: str, save_path: Optional[str] = None
 ) -> None:
     """
     Plot the distribution of a specific feature for each class.
 
     Args:
-        X (pd.DataFrame): Features
-        y (pd.Series): Target
-        feature_name (str): Name of the feature to plot
-        technique_name (str): Name of the technique (used for title)
-        save_path (Optional[str], optional): Path to save the plot. If None, the plot is displayed.
-            Defaults to None.
+        X (pd.DataFrame): Feature data.
+        y (pd.Series): Target labels.
+        feature_name (str): The name of the feature column in X to plot.
+        technique_name (str): Name of the technique for the title and filename.
+        save_path (Optional[str], optional): Path to save the plot. If None, displays the plot.
+                                             Defaults to None.
     """
     if feature_name not in X.columns:
-        logger.warning(
-            f"Feature '{feature_name}' not found in data. Skipping distribution plot."
-        )
+        logger.warning(f"Feature '{feature_name}' not found in data. Cannot plot distribution.")
         return
 
-    try:
-        plt.figure(figsize=(10, 6))
-        sns.histplot(data=X.assign(target=y), x=feature_name, hue="target", kde=True)
-        plt.title(
-            f"Distribution of '{feature_name}' by Target Class ({technique_name})"
-        )
-        plt.tight_layout()
+    plt.figure(figsize=(10, 6))
+    sns.histplot(data=X, x=feature_name, hue=y, kde=True, stat="density", common_norm=False)
+    plt.title(f'Distribution of {feature_name} by Class - {technique_name}')
+    plt.tight_layout()
 
-        if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            logger.info(
-                f"Saved feature distribution plot for '{feature_name}' to {save_path}"
-            )
-        else:
-            plt.show()
-        plt.close()
-
-    except Exception as e:
-        logger.error(f"Error plotting feature distribution for '{feature_name}': {e}")
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        logger.info(f"Saved feature distribution plot for '{feature_name}' to {save_path}")
+        mlflow.log_artifact(save_path)
+    else:
+        plt.show()
+    plt.close()
 
 
 def analyze_imbalance_techniques(
-    cv_folds: int = 5,
-    random_state: int = 42,
+    X: pd.DataFrame,
+    y: pd.Series,
+    config: Dict[str, Any],
     selected_technique: str = "Class Weights",
-    feature_for_distribution: Optional[str] = "age",
-    config: Optional[Dict] = None,  # Add config for MLflow experiment name
+    feature_to_plot: Optional[str] = "age", # Example feature
+    random_state: int = 42
 ) -> None:
     """
-    Main function to run the imbalance analysis, generate plots, save results,
-    and log everything to MLflow.
+    Run the full imbalance analysis pipeline.
+
+    Creates pipelines, evaluates them, generates comparison plots,
+    generates detailed plots for the selected technique, saves results,
+    and logs everything to MLflow.
 
     Args:
-        cv_folds (int, optional): Number of cross-validation folds. Defaults to 5.
+        X (pd.DataFrame): Preprocessed and scaled features.
+        y (pd.Series): Target variable.
+        config (Dict[str, Any]): Configuration dictionary.
+        selected_technique (str, optional): The technique for which to generate detailed plots
+                                            (confusion matrix, calibration, coefficients).
+                                            Defaults to "Class Weights".
+        feature_to_plot (Optional[str], optional): A specific feature name to plot its distribution
+                                                   by class for the selected technique. Defaults to "age".
         random_state (int, optional): Random state for reproducibility. Defaults to 42.
-        selected_technique (str, optional): The technique for detailed plots. Defaults to "Class Weights".
-        feature_for_distribution (Optional[str], optional): Feature for distribution plot. Defaults to "age".
-        config (Optional[Dict], optional): Configuration dictionary. Defaults to None.
     """
-    if config is None:
-        config = load_config()  # Load config if not provided
-
-    # --- MLflow Setup ---
+    logger.info("Starting imbalance analysis...")
     git_hash = get_git_revision_hash()
-    experiment_name = config.get("mlflow", {}).get(
-        "experiment_name", "MIMIC_Imbalance_Analysis"
-    )
+    experiment_name = config.get("mlflow", {}).get("experiment_name", "MIMIC_Imbalance_Analysis")
     mlflow.set_experiment(experiment_name)
-    run_name = f"imbalance_analysis_{git_hash[:7]}"
 
-    with mlflow.start_run(run_name=run_name) as run:
-        logger.info(f"Starting MLflow Run: {run.info.run_name} ({run.info.run_id})")
-        logger.info(f"MLflow Artifact URI: {mlflow.get_artifact_uri()}")
-
-        # Log parameters
-        mlflow.log_params(
-            {
-                "cv_folds": cv_folds,
-                "random_state": random_state,
-                "selected_technique_detailed_plots": selected_technique,
-                "feature_for_distribution_plot": feature_for_distribution or "None",
-                "git_hash": git_hash,
-            }
-        )
-
-        # --- Original Logic ---
-        # Load and preprocess data
-        data = load_data()
-        X, y = preprocess_data(data)
-
-        if X.empty or y.empty:
-            logger.error("Preprocessing failed. Exiting analysis.")
-            mlflow.log_param("status", "failed_preprocessing")
-            return
+    with mlflow.start_run(run_name=f"Imbalance_Comparison_{git_hash[:7]}"):
+        logger.info(f"MLflow Run ID for comparison: {mlflow.active_run().info.run_id}")
+        mlflow.log_param("analysis_type", "imbalance_comparison")
+        mlflow.log_param("git_hash", git_hash)
+        mlflow.log_param("random_state", random_state)
+        mlflow.log_param("cv_folds", config.get("models", {}).get("readmission", {}).get("cv_folds", 5))
 
         # Create pipelines
         pipelines = create_imbalance_pipelines(random_state=random_state)
 
         # Evaluate pipelines
-        results, fitted_pipelines = evaluate_pipelines(
-            X, y, pipelines, cv_folds=cv_folds, random_state=random_state
+        cv_folds = config.get("models", {}).get("readmission", {}).get("cv_folds", 5)
+        results, fitted_pipelines = evaluate_pipelines(X, y, pipelines, cv_folds=cv_folds, random_state=random_state)
+
+        # --- Generate and Save Plots ---
+        assets_dir = os.path.join(get_project_root(), "assets")
+        os.makedirs(assets_dir, exist_ok=True)
+
+        # Plot comparison curves and metrics
+        plot_pr_curves(results, save_path=os.path.join(assets_dir, "imbalance_pr_curves.png"))
+        plot_metrics_comparison(results, save_path=os.path.join(assets_dir, "imbalance_metrics_comparison.png"))
+
+        # Save summary results
+        results_csv_path = os.path.join(get_project_root(), "results", "imbalance_analysis", "metrics_summary.csv")
+        os.makedirs(os.path.dirname(results_csv_path), exist_ok=True)
+        save_results_to_csv(results, results_csv_path)
+
+        # --- Detailed Plots for Selected Technique ---
+        # Choose the best technique based on config or default, ensure it exists and succeeded
+        valid_techniques = [name for name, res in results.items() if name != "_meta" and res.get("success")]
+        if not valid_techniques:
+             logger.error("No pipelines succeeded. Cannot generate detailed plots.")
+             return # Exit if no pipeline worked
+
+        if selected_technique not in valid_techniques:
+             logger.warning(f"Selected technique '{selected_technique}' not found among successful pipelines or failed. Defaulting to '{valid_techniques[0]}'.")
+             selected_technique = valid_techniques[0]
+
+        logger.info(f"Generating detailed plots for selected technique: {selected_technique}")
+
+        selected_results = results[selected_technique]
+        selected_pipeline = fitted_pipelines.get(selected_technique) # Get from fitted pipelines dict
+
+        if selected_pipeline is None:
+             logger.error(f"Fitted pipeline for '{selected_technique}' not found. Cannot generate detailed plots.")
+             return
+
+        # Confusion Matrix
+        if selected_results["y_pred"] is not None:
+            plot_confusion_matrix(
+                selected_results["y_true"],
+                selected_results["y_pred"],
+                selected_technique,
+                save_path=os.path.join(assets_dir, f"confusion_matrix_{selected_technique.lower().replace(' ', '_')}.png")
+            )
+
+        # Calibration Curve
+        if selected_results["y_prob"] is not None:
+            plot_calibration_curve(
+                selected_results["y_true"],
+                selected_results["y_prob"],
+                selected_technique,
+                save_path=os.path.join(assets_dir, f"calibration_curve_{selected_technique.lower().replace(' ', '_')}.png")
+            )
+
+        # Feature Coefficients/Importances
+        plot_feature_coefficients(
+            selected_pipeline,
+            list(X.columns), # Feature names from the preprocessed data
+            selected_technique,
+            top_n=20,
+            save_path=os.path.join(assets_dir, f"feature_coefficients_{selected_technique.lower().replace(' ', '_')}.png")
         )
 
-        # Log metrics for each technique
-        logger.info("Logging metrics to MLflow...")
-        for name, result in results.items():
-            if name != "_meta" and result.get("success", False):
-                metrics_to_log = {
-                    f"{name}_precision": result.get("precision"),
-                    f"{name}_recall": result.get("recall"),
-                    f"{name}_f1": result.get("f1"),
-                    f"{name}_pr_auc": result.get("pr_auc"),
-                }
-                # Filter out None values before logging
-                metrics_to_log = {
-                    k: v for k, v in metrics_to_log.items() if v is not None
-                }
-                if metrics_to_log:
-                    mlflow.log_metrics(metrics_to_log)
-                    logger.info(f"  Logged metrics for {name}")
-                else:
-                    logger.warning(f"  No metrics to log for {name}")
-            elif name != "_meta":
-                logger.warning(
-                    f"  Skipping logging metrics for failed/incomplete pipeline: {name}"
-                )
-
-        # Create directories for assets and results if they don't exist
-        assets_dir = os.path.join(get_project_root(), "assets")
-        results_dir = os.path.join(get_project_root(), "results", "imbalance_analysis")
-        os.makedirs(assets_dir, exist_ok=True)
-        os.makedirs(results_dir, exist_ok=True)
-
-        # Plot PR curves
-        pr_curve_path = os.path.join(assets_dir, "imbalance_pr_curves.png")
-        plot_pr_curves(results, save_path=pr_curve_path)
-        if os.path.exists(pr_curve_path):
-            mlflow.log_artifact(pr_curve_path, artifact_path="plots")
-            logger.info(f"Logged PR curve plot: {pr_curve_path}")
-        else:
-            logger.warning(
-                f"PR curve plot not found at {pr_curve_path}, skipping MLflow logging."
+        # Feature Distribution (Optional)
+        if feature_to_plot:
+            plot_feature_distribution(
+                X, # Use original scaled X before potential sampling in pipeline
+                y,
+                feature_to_plot,
+                selected_technique,
+                save_path=os.path.join(assets_dir, f"feature_dist_{feature_to_plot}_{selected_technique.lower().replace(' ', '_')}.png")
             )
 
-        # Plot metrics comparison
-        metrics_plot_path = os.path.join(assets_dir, "imbalance_metrics_comparison.png")
-        plot_metrics_comparison(results, save_path=metrics_plot_path)
-        if os.path.exists(metrics_plot_path):
-            mlflow.log_artifact(metrics_plot_path, artifact_path="plots")
-            logger.info(f"Logged metrics comparison plot: {metrics_plot_path}")
-        else:
-            logger.warning(
-                f"Metrics comparison plot not found at {metrics_plot_path}, skipping MLflow logging."
-            )
+        # --- Log selected pipeline ---
+        # Save the fitted pipeline for the selected technique
+        selected_pipeline_path = os.path.join(get_project_root(), "models", f"imbalance_pipeline_{selected_technique.lower().replace(' ', '_')}.pkl")
+        try:
+            with open(selected_pipeline_path, 'wb') as f:
+                pickle.dump(selected_pipeline, f)
+            logger.info(f"Saved selected pipeline '{selected_technique}' to {selected_pipeline_path}")
+            mlflow.log_artifact(selected_pipeline_path, artifact_path="selected_pipeline")
+        except Exception as e:
+            logger.error(f"Failed to save selected pipeline: {e}", exc_info=True)
 
-        # Save results to CSV
-        csv_path = os.path.join(results_dir, "imbalance_metrics.csv")
-        save_results_to_csv(results, save_path=csv_path)
-        if os.path.exists(csv_path):
-            mlflow.log_artifact(csv_path, artifact_path="results")
-            logger.info(f"Logged results CSV: {csv_path}")
-        else:
-            logger.warning(
-                f"Results CSV not found at {csv_path}, skipping MLflow logging."
-            )
 
-        # Generate detailed plots and save pipeline for the selected technique
-        if selected_technique in results and results[selected_technique].get(
-            "success", False
-        ):
-            logger.info(f"Generating detailed plots for '{selected_technique}'...")
-            result = results[selected_technique]
-            pipeline_to_log = fitted_pipelines.get(
-                selected_technique
-            )  # Use fitted pipeline
-
-            # Confusion Matrix
-            cm_path = os.path.join(
-                assets_dir,
-                f"confusion_matrix_{selected_technique.lower().replace(' ', '_')}.png",
-            )
-            if result["y_true"] is not None and result["y_pred"] is not None:
-                plot_confusion_matrix(
-                    result["y_true"], result["y_pred"], save_path=cm_path
-                )
-                if os.path.exists(cm_path):
-                    mlflow.log_artifact(cm_path, artifact_path="plots")
-                    logger.info(f"Logged confusion matrix plot: {cm_path}")
-                else:
-                    logger.warning(
-                        f"Confusion matrix plot not found at {cm_path}, skipping MLflow logging."
-                    )
-
-            # Calibration Curve
-            cal_curve_path = os.path.join(
-                assets_dir,
-                f"calibration_curve_{selected_technique.lower().replace(' ', '_')}.png",
-            )
-            if (
-                pipeline_to_log
-                and result["y_true"] is not None
-                and result["y_prob"] is not None
-            ):
-                plot_calibration_curve(
-                    pipeline_to_log,
-                    X,
-                    result["y_true"],
-                    selected_technique,
-                    save_path=cal_curve_path,
-                )
-                if os.path.exists(cal_curve_path):
-                    mlflow.log_artifact(cal_curve_path, artifact_path="plots")
-                    logger.info(f"Logged calibration curve plot: {cal_curve_path}")
-                else:
-                    logger.warning(
-                        f"Calibration curve plot not found at {cal_curve_path}, skipping MLflow logging."
-                    )
-
-            # Feature Coefficients (only for Logistic Regression)
-            coeffs_path = os.path.join(
-                assets_dir,
-                f"feature_coefficients_{selected_technique.lower().replace(' ', '_')}.png",
-            )
-            if pipeline_to_log:
-                classifier = pipeline_to_log.named_steps.get("classifier")
-                if isinstance(classifier, LogisticRegression):
-                    plot_feature_coefficients(
-                        classifier,
-                        list(X.columns),
-                        save_path=coeffs_path,  # Ensure X.columns is a list
-                    )
-                    if os.path.exists(coeffs_path):
-                        mlflow.log_artifact(coeffs_path, artifact_path="plots")
-                        logger.info(f"Logged feature coefficients plot: {coeffs_path}")
-                    else:
-                        logger.warning(
-                            f"Feature coefficients plot not found at {coeffs_path}, skipping MLflow logging."
-                        )
-
-            # Feature Distribution Plot
-            if feature_for_distribution and feature_for_distribution in X.columns:
-                dist_path = os.path.join(
-                    assets_dir,
-                    f"feature_distribution_{feature_for_distribution}_{selected_technique.lower().replace(' ', '_')}.png",
-                )
-                plot_feature_distribution(
-                    X,
-                    y,
-                    feature_for_distribution,
-                    selected_technique,
-                    save_path=dist_path,
-                )
-                if os.path.exists(dist_path):
-                    mlflow.log_artifact(dist_path, artifact_path="plots")
-                    logger.info(f"Logged feature distribution plot: {dist_path}")
-                else:
-                    logger.warning(
-                        f"Feature distribution plot not found at {dist_path}, skipping MLflow logging."
-                    )
-
-            # Save and log the fitted pipeline for the selected technique
-            if pipeline_to_log:
-                pipeline_dir = os.path.join(
-                    get_project_root(), "models", "imbalance_analysis"
-                )
-                os.makedirs(pipeline_dir, exist_ok=True)
-                pipeline_filename = (
-                    f"pipeline_{selected_technique.lower().replace(' ', '_')}.pkl"
-                )
-                pipeline_path = os.path.join(pipeline_dir, pipeline_filename)
-
-                try:
-                    with open(pipeline_path, "wb") as f:
-                        pickle.dump(pipeline_to_log, f)
-                    logger.info(
-                        f"Saved fitted pipeline for '{selected_technique}' to {pipeline_path}"
-                    )
-                    mlflow.log_artifact(pipeline_path, artifact_path="pipelines")
-                    logger.info(f"Logged pipeline artifact: {pipeline_path}")
-                except Exception as e:
-                    logger.error(
-                        f"Error saving or logging pipeline {pipeline_path}: {e}"
-                    )
-
-        else:
-            logger.warning(
-                f"Selected technique '{selected_technique}' not found in results or failed evaluation. "
-                "Skipping detailed plots and pipeline saving/logging."
-            )
-            mlflow.log_param(
-                "status", f"failed_selected_technique_{selected_technique}"
-            )
+        # Log overall success status
+        mlflow.log_param("overall_success", results["_meta"]["any_success"])
 
         logger.info("Imbalance analysis complete.")
-        mlflow.log_param("status", "completed")
-        logger.info(f"MLflow Run {run.info.run_id} finished.")
 
 
 def main() -> None:
     """
-    Main function to parse arguments and run the imbalance analysis.
+    Main function to run the imbalance analysis pipeline.
+
+    Parses command-line arguments, loads and preprocesses data,
+    and runs the analysis.
     """
-    parser = argparse.ArgumentParser(
-        description="Analyze imbalance handling techniques for readmission prediction."
-    )
-    parser.add_argument(
-        "--cv-folds", type=int, default=5, help="Number of cross-validation folds"
-    )
-    parser.add_argument(
-        "--random-state", type=int, default=42, help="Random state for reproducibility"
-    )
-    parser.add_argument(
-        "--technique",
-        type=str,
-        default="Class Weights",
-        help="Technique for detailed plots",
-    )
-    parser.add_argument(
-        "--feature", type=str, default="age", help="Feature name for distribution plot"
-    )
-    parser.add_argument(  # Add config argument
-        "--config", type=str, default=None, help="Path to configuration file"
-    )
+    parser = argparse.ArgumentParser(description="Run imbalance handling analysis")
+    # Add arguments if needed, e.g., to select specific techniques or config file
+    # parser.add_argument(...)
     args = parser.parse_args()
 
-    # Load configuration if specified
-    config = load_config(args.config) if args.config else load_config()
+    try:
+        # Load data
+        data = load_data()
 
-    analyze_imbalance_techniques(
-        cv_folds=args.cv_folds,
-        random_state=args.random_state,
-        selected_technique=args.technique,
-        feature_for_distribution=args.feature,
-        config=config,  # Pass config
-    )
+        # Preprocess data
+        X, y = preprocess_data(data)
+
+        # Check if preprocessing was successful
+        if X.empty or y.empty:
+             logger.error("Preprocessing resulted in empty data. Aborting analysis.")
+             return
+
+        # Run analysis
+        config = load_config() # Load config again for analysis function
+        analyze_imbalance_techniques(X, y, config)
+
+    except FileNotFoundError:
+        logger.error("Required data file not found. Please ensure 'combined_features.csv' exists in the processed data directory.")
+    except Exception as e:
+        logger.error(f"An error occurred during the analysis pipeline: {e}", exc_info=True)
 
 
 if __name__ == "__main__":
