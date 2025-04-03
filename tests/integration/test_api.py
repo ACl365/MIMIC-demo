@@ -89,11 +89,15 @@ def mock_model_load(mocker):
     mock_loaded_model.scaler = mock_scaler
     mock_loaded_model.feature_names = MOCK_EXPECTED_FEATURES
     mock_loaded_model.model_type = "MockLogisticRegression"  # Example type
+
     # Add a mock preprocess method needed for SHAP background data prep
     def mock_preprocess_for_shap(data, for_prediction=False):
         # Return a dummy DataFrame matching expected features and None for target
-        dummy_X = pd.DataFrame([[0] * len(MOCK_EXPECTED_FEATURES)], columns=MOCK_EXPECTED_FEATURES)
+        dummy_X = pd.DataFrame(
+            [[0] * len(MOCK_EXPECTED_FEATURES)], columns=MOCK_EXPECTED_FEATURES
+        )
         return dummy_X, None
+
     mock_loaded_model.preprocess = mock_preprocess_for_shap
 
     # Patch targets within the imported 'main' module
@@ -102,18 +106,16 @@ def mock_model_load(mocker):
     # Provide a minimal config including the 'data' section needed for SHAP background data path
     shap_data_path = "mock/path/does/not/matter/for/mock/shap"
     mock_config_for_api = {
-        "data": {
-            "processed": {
-                "combined_features": shap_data_path
-            }
-        },
-        "logging": {"level": "INFO"}, # Keep logging if needed
+        "data": {"processed": {"combined_features": shap_data_path}},
+        "logging": {"level": "INFO"},  # Keep logging if needed
         # Add other minimal sections if startup requires them
     }
     mocker.patch("main.load_config", return_value=mock_config_for_api)
 
     # Patch os.path.exists used within main.py's startup handler
-    mocker.patch("main.os.path.exists", return_value=True)  # Assume model file exists for loading
+    mocker.patch(
+        "main.os.path.exists", return_value=True
+    )  # Assume model file exists for loading
 
     # Patch pd.read_csv specifically for the SHAP background data loading call
     def mock_read_csv_for_shap(*args, **kwargs):
@@ -123,12 +125,13 @@ def mock_model_load(mocker):
         normalized_shap_path = os.path.normpath(shap_data_path)
         if normalized_arg_path.endswith(normalized_shap_path):
             # Return a minimal DataFrame matching expected features for SHAP
-            return pd.DataFrame([[0] * len(MOCK_EXPECTED_FEATURES)], columns=MOCK_EXPECTED_FEATURES)
+            return pd.DataFrame(
+                [[0] * len(MOCK_EXPECTED_FEATURES)], columns=MOCK_EXPECTED_FEATURES
+            )
         # For other calls, raise an error or return default (though none expected here)
         raise ValueError(f"Unexpected pd.read_csv call in mock_model_load: {args[0]}")
 
     mocker.patch("main.pd.read_csv", side_effect=mock_read_csv_for_shap)
-
 
     # Return the mock object if needed, though patching is the main goal
     return mock_loaded_model

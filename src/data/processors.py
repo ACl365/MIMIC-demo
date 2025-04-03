@@ -25,7 +25,7 @@ class BaseProcessor(ABC):
     and saving the results.
     """
 
-    def __init__(self, config: Optional[Dict] = None) -> None:
+    def __init__(self, config: Optional[Dict[str, Any]] = None) -> None:
         """
         Initialize the processor, loading configuration.
 
@@ -101,18 +101,17 @@ class PatientProcessor(BaseProcessor):
             mimic4_path = get_data_path("raw", "mimic_iv", self.config)
             # Adjust path based on MIMIC-IV structure (often nested)
             mimic4_patients_path = os.path.join(
-                mimic4_path, "hosp", "patients.csv" # Common MIMIC-IV structure
+                mimic4_path, "hosp", "patients.csv"  # Common MIMIC-IV structure
             )
             # Fallback if not in 'hosp' subdir
             if not os.path.exists(mimic4_patients_path):
-                 mimic4_patients_path = os.path.join(mimic4_path, "patients.csv")
-
+                mimic4_patients_path = os.path.join(mimic4_path, "patients.csv")
 
             if os.path.exists(mimic4_patients_path):
                 mimic4_patients = pd.read_csv(
                     mimic4_patients_path,
                     # MIMIC-IV uses anchor_year, anchor_year_group
-                    parse_dates=["dod"], # Only DOD is typically a full date
+                    parse_dates=["dod"],  # Only DOD is typically a full date
                 )
 
                 # Process MIMIC-IV patient data
@@ -126,7 +125,9 @@ class PatientProcessor(BaseProcessor):
                 )
                 patients = mimic3_patients
         except Exception as e:
-            self.logger.warning(f"Error loading or processing MIMIC-IV patient data: {e}", exc_info=True)
+            self.logger.warning(
+                f"Error loading or processing MIMIC-IV patient data: {e}", exc_info=True
+            )
             self.logger.warning("Using only MIMIC-III patient data")
             patients = mimic3_patients
 
@@ -169,8 +170,7 @@ class PatientProcessor(BaseProcessor):
             )
             # Ensure 'age' column exists even if calculation failed
             if "age" not in patients.columns:
-                 patients["age"] = pd.NA
-
+                patients["age"] = pd.NA
 
         # Clean up gender
         patients["gender"] = patients["gender"].str.upper()
@@ -193,7 +193,7 @@ class PatientProcessor(BaseProcessor):
         Returns:
             pd.DataFrame: Processed MIMIC-IV patient data.
         """
-         # Convert column names to lowercase for consistency
+        # Convert column names to lowercase for consistency
         patients.columns = patients.columns.str.lower()
 
         # Add source column
@@ -203,9 +203,8 @@ class PatientProcessor(BaseProcessor):
         if "anchor_age" in patients.columns:
             patients["age"] = patients["anchor_age"]
         else:
-             self.logger.warning("MIMIC-IV data missing 'anchor_age'. Age will be NaN.")
-             patients["age"] = pd.NA
-
+            self.logger.warning("MIMIC-IV data missing 'anchor_age'. Age will be NaN.")
+            patients["age"] = pd.NA
 
         # Clean up gender
         if "gender" in patients.columns:
@@ -213,7 +212,9 @@ class PatientProcessor(BaseProcessor):
 
         # Select and rename columns for consistency
         # Note: MIMIC-IV doesn't have DOB directly available in patients.csv
-        patients = patients[["subject_id", "gender", "dod", "source", "age", "anchor_year"]] # Keep anchor_year for potential future use
+        patients = patients[
+            ["subject_id", "gender", "dod", "source", "age", "anchor_year"]
+        ]  # Keep anchor_year for potential future use
 
         return patients
 
@@ -234,14 +235,18 @@ class PatientProcessor(BaseProcessor):
         """
         # Identify common columns, prioritizing MIMIC-III names if different but conceptually same
         # For patients, columns are generally aligned after processing.
-        common_columns = list(set(mimic3_patients.columns) & set(mimic4_patients.columns))
+        common_columns = list(
+            set(mimic3_patients.columns) & set(mimic4_patients.columns)
+        )
 
         # Ensure essential columns are present
         essential_cols = ["subject_id", "gender", "age", "dod", "source"]
         for col in essential_cols:
-             if col not in common_columns:
-                 self.logger.warning(f"Essential column '{col}' missing from common columns during patient data combination.")
-                 # Decide how to handle: add if missing in one? For now, proceed with intersection.
+            if col not in common_columns:
+                self.logger.warning(
+                    f"Essential column '{col}' missing from common columns during patient data combination."
+                )
+                # Decide how to handle: add if missing in one? For now, proceed with intersection.
 
         self.logger.info(f"Combining patient data using columns: {common_columns}")
 
@@ -256,8 +261,9 @@ class PatientProcessor(BaseProcessor):
         # Strategy: Keep the first occurrence (could be MIMIC-III or IV depending on concat order)
         # A more robust strategy might involve prioritizing one source or merging details.
         patients = patients.drop_duplicates(subset=["subject_id"], keep="first")
-        self.logger.info(f"Combined patient data shape after dropping duplicates: {patients.shape}")
-
+        self.logger.info(
+            f"Combined patient data shape after dropping duplicates: {patients.shape}"
+        )
 
         return patients
 
@@ -305,12 +311,9 @@ class AdmissionProcessor(BaseProcessor):
         try:
             mimic4_path = get_data_path("raw", "mimic_iv", self.config)
             # Adjust path based on MIMIC-IV structure
-            mimic4_admissions_path = os.path.join(
-                mimic4_path, "hosp", "admissions.csv"
-            )
+            mimic4_admissions_path = os.path.join(mimic4_path, "hosp", "admissions.csv")
             if not os.path.exists(mimic4_admissions_path):
-                 mimic4_admissions_path = os.path.join(mimic4_path, "admissions.csv")
-
+                mimic4_admissions_path = os.path.join(mimic4_path, "admissions.csv")
 
             if os.path.exists(mimic4_admissions_path):
                 mimic4_admissions = pd.read_csv(
@@ -337,7 +340,10 @@ class AdmissionProcessor(BaseProcessor):
                 )
                 admissions = mimic3_admissions
         except Exception as e:
-            self.logger.warning(f"Error loading or processing MIMIC-IV admission data: {e}", exc_info=True)
+            self.logger.warning(
+                f"Error loading or processing MIMIC-IV admission data: {e}",
+                exc_info=True,
+            )
             self.logger.warning("Using only MIMIC-III admission data")
             admissions = mimic3_admissions
 
@@ -389,7 +395,7 @@ class AdmissionProcessor(BaseProcessor):
         Returns:
             pd.DataFrame: Processed MIMIC-IV admission data.
         """
-         # Convert column names to lowercase for consistency
+        # Convert column names to lowercase for consistency
         admissions.columns = admissions.columns.str.lower()
 
         # Add source column
@@ -427,13 +433,17 @@ class AdmissionProcessor(BaseProcessor):
             pd.DataFrame: Combined admission data.
         """
         # Identify common columns
-        common_columns = list(set(mimic3_admissions.columns) & set(mimic4_admissions.columns))
+        common_columns = list(
+            set(mimic3_admissions.columns) & set(mimic4_admissions.columns)
+        )
 
         # Ensure essential columns are present
         essential_cols = ["subject_id", "hadm_id", "admittime", "dischtime", "source"]
         for col in essential_cols:
-             if col not in common_columns:
-                 self.logger.warning(f"Essential column '{col}' missing from common columns during admission data combination.")
+            if col not in common_columns:
+                self.logger.warning(
+                    f"Essential column '{col}' missing from common columns during admission data combination."
+                )
 
         self.logger.info(f"Combining admission data using columns: {common_columns}")
 
@@ -445,8 +455,12 @@ class AdmissionProcessor(BaseProcessor):
         admissions = pd.concat([mimic3_subset, mimic4_subset], ignore_index=True)
 
         # Handle potential duplicates (e.g., if a hadm_id exists in both)
-        admissions = admissions.drop_duplicates(subset=["subject_id", "hadm_id"], keep="first")
-        self.logger.info(f"Combined admission data shape after dropping duplicates: {admissions.shape}")
+        admissions = admissions.drop_duplicates(
+            subset=["subject_id", "hadm_id"], keep="first"
+        )
+        self.logger.info(
+            f"Combined admission data shape after dropping duplicates: {admissions.shape}"
+        )
 
         return admissions
 
@@ -472,7 +486,9 @@ class AdmissionProcessor(BaseProcessor):
                 admissions["dischtime"] - admissions["admittime"]
             ).dt.total_seconds() / (24 * 60 * 60)
         else:
-            self.logger.warning("Cannot calculate 'los_days': missing 'dischtime' or 'admittime'.")
+            self.logger.warning(
+                "Cannot calculate 'los_days': missing 'dischtime' or 'admittime'."
+            )
             admissions["los_days"] = pd.NA
 
         # Calculate ED length of stay in hours (if available)
@@ -483,10 +499,13 @@ class AdmissionProcessor(BaseProcessor):
                 admissions.loc[ed_mask, "edouttime"]
                 - admissions.loc[ed_mask, "edregtime"]
             ).dt.total_seconds() / (60 * 60)
-            admissions["ed_los_hours"] = admissions["ed_los_hours"].fillna(pd.NA) # Fill non-calculable rows with NA
+            admissions["ed_los_hours"] = admissions["ed_los_hours"].fillna(
+                pd.NA
+            )  # Fill non-calculable rows with NA
         else:
-             admissions["ed_los_hours"] = pd.NA # Column doesn't exist if times aren't present
-
+            admissions["ed_los_hours"] = (
+                pd.NA
+            )  # Column doesn't exist if times aren't present
 
         # Flag in-hospital deaths
         # Ensure 'hospital_expire_flag' exists before using it
@@ -497,17 +516,17 @@ class AdmissionProcessor(BaseProcessor):
         elif "deathtime" in admissions.columns:
             # Handle case where flag is missing (e.g., set to False or based on 'deathtime')
             # Check if deathtime falls within the admission period (or slightly after discharge)
-            admissions["hospital_death"] = (
-                 (~admissions["deathtime"].isna()) &
-                 (admissions["deathtime"] <= admissions["dischtime"]) # Basic check
-            )
+            admissions["hospital_death"] = (~admissions["deathtime"].isna()) & (
+                admissions["deathtime"] <= admissions["dischtime"]
+            )  # Basic check
             self.logger.warning(
                 "'hospital_expire_flag' not found. Inferring 'hospital_death' from 'deathtime' <= 'dischtime'."
             )
         else:
-             self.logger.warning("Cannot determine 'hospital_death': missing 'hospital_expire_flag' and 'deathtime'. Setting to False.")
-             admissions["hospital_death"] = False
-
+            self.logger.warning(
+                "Cannot determine 'hospital_death': missing 'hospital_expire_flag' and 'deathtime'. Setting to False."
+            )
+            admissions["hospital_death"] = False
 
         return admissions
 
@@ -554,8 +573,14 @@ class AdmissionProcessor(BaseProcessor):
         admissions["days_to_readmission"] = float("nan")
 
         # Create shifted columns for the next admission's data within each patient group
-        admissions["next_admittime"] = admissions.groupby("subject_id")["admittime"].shift(-1)
-        admissions["next_subject_id"] = admissions.groupby("subject_id")["subject_id"].shift(-1) # To confirm it's the same patient
+        admissions["next_admittime"] = admissions.groupby("subject_id")[
+            "admittime"
+        ].shift(-1)
+        admissions["next_subject_id"] = admissions.groupby("subject_id")[
+            "subject_id"
+        ].shift(
+            -1
+        )  # To confirm it's the same patient
 
         # Calculate days between discharge and next admission only for valid rows
         # Valid rows: Same patient, current admission did not result in death, next admission exists
@@ -563,7 +588,7 @@ class AdmissionProcessor(BaseProcessor):
             (admissions["subject_id"] == admissions["next_subject_id"])
             & (~admissions["hospital_death"])
             & (admissions["next_admittime"].notna())
-            & (admissions["dischtime"].notna()) # Ensure discharge time is not null
+            & (admissions["dischtime"].notna())  # Ensure discharge time is not null
         )
 
         # Calculate days_to_readmission for valid rows
@@ -574,8 +599,16 @@ class AdmissionProcessor(BaseProcessor):
 
         # Flag readmissions within time windows (only if days >= 1)
         # Using .loc ensures alignment even if index is not sequential
-        readmit_30_mask = valid_rows & (admissions["days_to_readmission"] >= 1) & (admissions["days_to_readmission"] <= 30)
-        readmit_90_mask = valid_rows & (admissions["days_to_readmission"] >= 1) & (admissions["days_to_readmission"] <= 90)
+        readmit_30_mask = (
+            valid_rows
+            & (admissions["days_to_readmission"] >= 1)
+            & (admissions["days_to_readmission"] <= 30)
+        )
+        readmit_90_mask = (
+            valid_rows
+            & (admissions["days_to_readmission"] >= 1)
+            & (admissions["days_to_readmission"] <= 90)
+        )
 
         admissions.loc[readmit_30_mask, "readmission_30day"] = True
         admissions.loc[readmit_90_mask, "readmission_90day"] = True
@@ -626,11 +659,10 @@ class ICUStayProcessor(BaseProcessor):
             mimic4_path = get_data_path("raw", "mimic_iv", self.config)
             # Adjust path based on MIMIC-IV structure
             mimic4_icustays_path = os.path.join(
-                mimic4_path, "icu", "icustays.csv" # Common MIMIC-IV structure
+                mimic4_path, "icu", "icustays.csv"  # Common MIMIC-IV structure
             )
             if not os.path.exists(mimic4_icustays_path):
-                 mimic4_icustays_path = os.path.join(mimic4_path, "icustays.csv")
-
+                mimic4_icustays_path = os.path.join(mimic4_path, "icustays.csv")
 
             if os.path.exists(mimic4_icustays_path):
                 mimic4_icustays = pd.read_csv(
@@ -648,7 +680,9 @@ class ICUStayProcessor(BaseProcessor):
                 )
                 icustays = mimic3_icustays
         except Exception as e:
-            self.logger.warning(f"Error loading or processing MIMIC-IV icustay data: {e}", exc_info=True)
+            self.logger.warning(
+                f"Error loading or processing MIMIC-IV icustay data: {e}", exc_info=True
+            )
             self.logger.warning("Using only MIMIC-III icustay data")
             icustays = mimic3_icustays
 
@@ -674,9 +708,9 @@ class ICUStayProcessor(BaseProcessor):
         icustays["source"] = "mimic_iii"
 
         # Calculate length of stay (LOS) in days
-        icustays["los"] = (icustays["outtime"] - icustays["intime"]).dt.total_seconds() / (
-            24 * 60 * 60
-        )
+        icustays["los"] = (
+            icustays["outtime"] - icustays["intime"]
+        ).dt.total_seconds() / (24 * 60 * 60)
 
         # Select relevant columns
         icustays = icustays[
@@ -704,28 +738,40 @@ class ICUStayProcessor(BaseProcessor):
         icustays["source"] = "mimic_iv"
 
         # MIMIC-IV often has 'los' pre-calculated
-        if "los" not in icustays.columns and "outtime" in icustays.columns and "intime" in icustays.columns:
-             icustays["los"] = (icustays["outtime"] - icustays["intime"]).dt.total_seconds() / (
-                 24 * 60 * 60
-             )
-             self.logger.info("Calculated 'los' for MIMIC-IV ICU stays.")
-
+        if (
+            "los" not in icustays.columns
+            and "outtime" in icustays.columns
+            and "intime" in icustays.columns
+        ):
+            icustays["los"] = (
+                icustays["outtime"] - icustays["intime"]
+            ).dt.total_seconds() / (24 * 60 * 60)
+            self.logger.info("Calculated 'los' for MIMIC-IV ICU stays.")
 
         # Select relevant columns (ensure consistency with MIMIC-III processing)
         # Rename stay_id if needed (MIMIC-IV sometimes uses icustay_id)
         if "icustay_id" in icustays.columns and "stay_id" not in icustays.columns:
-             icustays = icustays.rename(columns={"icustay_id": "stay_id"})
+            icustays = icustays.rename(columns={"icustay_id": "stay_id"})
 
-        cols_to_keep = ["subject_id", "hadm_id", "stay_id", "intime", "outtime", "los", "source"]
+        cols_to_keep = [
+            "subject_id",
+            "hadm_id",
+            "stay_id",
+            "intime",
+            "outtime",
+            "los",
+            "source",
+        ]
         missing_cols = [col for col in cols_to_keep if col not in icustays.columns]
         if missing_cols:
-             self.logger.warning(f"Missing expected columns in MIMIC-IV ICU data: {missing_cols}")
-             # Add missing columns with NaNs if necessary before selection
-             for col in missing_cols:
-                 icustays[col] = pd.NA
+            self.logger.warning(
+                f"Missing expected columns in MIMIC-IV ICU data: {missing_cols}"
+            )
+            # Add missing columns with NaNs if necessary before selection
+            for col in missing_cols:
+                icustays[col] = pd.NA
 
         return icustays[cols_to_keep]
-
 
     def _combine_icustay_data(
         self, mimic3_icustays: pd.DataFrame, mimic4_icustays: pd.DataFrame
@@ -744,7 +790,9 @@ class ICUStayProcessor(BaseProcessor):
             pd.DataFrame: Combined ICU stay data.
         """
         # Identify common columns
-        common_columns = list(set(mimic3_icustays.columns) & set(mimic4_icustays.columns))
+        common_columns = list(
+            set(mimic3_icustays.columns) & set(mimic4_icustays.columns)
+        )
 
         self.logger.info(f"Combining ICU stay data using columns: {common_columns}")
 
@@ -756,7 +804,11 @@ class ICUStayProcessor(BaseProcessor):
         icustays = pd.concat([mimic3_subset, mimic4_subset], ignore_index=True)
 
         # Handle potential duplicates (e.g., if a stay_id exists in both)
-        icustays = icustays.drop_duplicates(subset=["subject_id", "hadm_id", "stay_id"], keep="first")
-        self.logger.info(f"Combined ICU stay data shape after dropping duplicates: {icustays.shape}")
+        icustays = icustays.drop_duplicates(
+            subset=["subject_id", "hadm_id", "stay_id"], keep="first"
+        )
+        self.logger.info(
+            f"Combined ICU stay data shape after dropping duplicates: {icustays.shape}"
+        )
 
         return icustays

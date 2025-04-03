@@ -72,7 +72,10 @@ MOCK_MAPPINGS = {
         "categories": {"Heart Rate": [211], "Systolic BP": [51]},
         "itemids": [211, 51],
     },
-    "icd9_categories": {"ranges": {"Infectious Diseases": [[1, 139]]}, "specific_codes": {}}, # Reverted: Ranges should be list of lists
+    "icd9_categories": {
+        "ranges": {"Infectious Diseases": [[1, 139]]},
+        "specific_codes": {},
+    },  # Reverted: Ranges should be list of lists
 }
 
 
@@ -270,31 +273,35 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
         self.assertIn("lab_Glucose_sequence_data", features.columns)
         self.assertIn("lab_Potassium_sequence_data", features.columns)
         # Check for sequence vital features (standardized names might differ slightly, adjust if needed)
-        self.assertIn("vital_heart_rate_sequence_data", features.columns) # Corrected name
-        self.assertIn("vital_systolic_bp_sequence_data", features.columns) # Corrected name
+        self.assertIn(
+            "vital_heart_rate_sequence_data", features.columns
+        )  # Corrected name
+        self.assertIn(
+            "vital_systolic_bp_sequence_data", features.columns
+        )  # Corrected name
 
         # Check content of sequence data (optional, more complex)
         # Example: Check if the sequence contains the expected number of tuples (time, value)
         glucose_seq = features.loc[0, "lab_Glucose_sequence_data"]
         self.assertIsInstance(glucose_seq, list)
-        if glucose_seq: # Check if not empty list or NaN
-             # Check the inner structure: list containing tuples
-             self.assertIsInstance(glucose_seq[0], list)
-             if glucose_seq[0]: # Check if the inner list is not empty
-                 self.assertIsInstance(glucose_seq[0][0], tuple)
-                 self.assertEqual(len(glucose_seq[0][0]), 2) # Should be (time, value)
+        if glucose_seq:  # Check if not empty list or NaN
+            # Check the inner structure: list containing tuples
+            self.assertIsInstance(glucose_seq[0], list)
+            if glucose_seq[0]:  # Check if the inner list is not empty
+                self.assertIsInstance(glucose_seq[0][0], tuple)
+                self.assertEqual(len(glucose_seq[0][0]), 2)  # Should be (time, value)
 
-        hr_seq = features.loc[0, "vital_heart_rate_sequence_data"] # Corrected name
+        hr_seq = features.loc[0, "vital_heart_rate_sequence_data"]  # Corrected name
         self.assertIsInstance(hr_seq, list)
         if hr_seq:
-             # Check the inner structure: list containing tuples
-             self.assertIsInstance(hr_seq[0], list)
-             if hr_seq[0]: # Check if the inner list is not empty
-                 self.assertIsInstance(hr_seq[0][0], tuple)
-                 self.assertEqual(len(hr_seq[0][0]), 2)
+            # Check the inner structure: list containing tuples
+            self.assertIsInstance(hr_seq[0], list)
+            if hr_seq[0]:  # Check if the inner list is not empty
+                self.assertIsInstance(hr_seq[0][0], tuple)
+                self.assertEqual(len(hr_seq[0][0]), 2)
 
     @patch("utils.config.load_config", return_value=MOCK_CONFIG)
-    @patch("utils.config.load_mappings", return_value={}) # Return empty mappings
+    @patch("utils.config.load_mappings", return_value={})  # Return empty mappings
     @patch("features.feature_extractors.get_data_path")
     @patch("features.feature_extractors.pd.read_csv")
     @patch("features.feature_extractors.os.path.exists")
@@ -303,32 +310,79 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
     ):
         # --- Setup Mocks (similar to test_extract_clinical_features) ---
         mock_exists.return_value = True
+
         # Mock get_data_path (copy from previous test or simplify if needed)
         def get_path_side_effect(data_type, dataset, config):
-             if data_type == "processed":
-                 if dataset == "admission_data": return "mock/processed/admission_data.csv"
-                 if dataset == "icu_data": return "mock/processed/icu_data.csv"
-             elif data_type == "raw":
-                 if dataset == "mimic_iii": return "mock/raw/mimic_iii"
-             return f"mock/{data_type}/{dataset}"
+            if data_type == "processed":
+                if dataset == "admission_data":
+                    return "mock/processed/admission_data.csv"
+                if dataset == "icu_data":
+                    return "mock/processed/icu_data.csv"
+            elif data_type == "raw":
+                if dataset == "mimic_iii":
+                    return "mock/raw/mimic_iii"
+            return f"mock/{data_type}/{dataset}"
+
         mock_get_path.side_effect = get_path_side_effect
 
         # Mock dataframes (copy from previous test)
         mock_admissions = pd.DataFrame({"subject_id": [1], "hadm_id": [101]})
-        mock_icustays = pd.DataFrame({"subject_id": [1], "hadm_id": [101], "stay_id": [1001], "intime": [datetime(2023, 1, 1, 12, 0, 0)], "outtime": [datetime(2023, 1, 3, 12, 0, 0)]})
-        mock_labevents = pd.DataFrame({"subject_id": [1, 1], "hadm_id": [101, 101], "itemid": [50809, 50971], "charttime": [datetime(2023, 1, 1, 14, 0, 0), datetime(2023, 1, 1, 16, 0, 0)], "valuenum": [120.0, 4.5]})
-        mock_d_labitems = pd.DataFrame({"itemid": [50809, 50971], "label": ["Glucose", "Potassium"]})
-        mock_chartevents = pd.DataFrame({"subject_id": [1, 1], "hadm_id": [101, 101], "stay_id": [1001, 1001], "itemid": [211, 51], "charttime": [datetime(2023, 1, 1, 13, 0, 0), datetime(2023, 1, 1, 13, 5, 0)], "valuenum": [80.0, 120.0]})
-        mock_d_items = pd.DataFrame({"itemid": [211, 51], "label": ["Heart Rate", "Arterial BP Systolic"]})
+        mock_icustays = pd.DataFrame(
+            {
+                "subject_id": [1],
+                "hadm_id": [101],
+                "stay_id": [1001],
+                "intime": [datetime(2023, 1, 1, 12, 0, 0)],
+                "outtime": [datetime(2023, 1, 3, 12, 0, 0)],
+            }
+        )
+        mock_labevents = pd.DataFrame(
+            {
+                "subject_id": [1, 1],
+                "hadm_id": [101, 101],
+                "itemid": [50809, 50971],
+                "charttime": [
+                    datetime(2023, 1, 1, 14, 0, 0),
+                    datetime(2023, 1, 1, 16, 0, 0),
+                ],
+                "valuenum": [120.0, 4.5],
+            }
+        )
+        mock_d_labitems = pd.DataFrame(
+            {"itemid": [50809, 50971], "label": ["Glucose", "Potassium"]}
+        )
+        mock_chartevents = pd.DataFrame(
+            {
+                "subject_id": [1, 1],
+                "hadm_id": [101, 101],
+                "stay_id": [1001, 1001],
+                "itemid": [211, 51],
+                "charttime": [
+                    datetime(2023, 1, 1, 13, 0, 0),
+                    datetime(2023, 1, 1, 13, 5, 0),
+                ],
+                "valuenum": [80.0, 120.0],
+            }
+        )
+        mock_d_items = pd.DataFrame(
+            {"itemid": [211, 51], "label": ["Heart Rate", "Arterial BP Systolic"]}
+        )
 
         def read_csv_side_effect(path, **kwargs):
-            if path == "mock/processed/admission_data.csv": return mock_admissions
-            if path == "mock/processed/icu_data.csv": return mock_icustays
-            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"): return mock_labevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"): return mock_d_labitems
-            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"): return mock_chartevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"): return mock_d_items
+            if path == "mock/processed/admission_data.csv":
+                return mock_admissions
+            if path == "mock/processed/icu_data.csv":
+                return mock_icustays
+            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"):
+                return mock_labevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"):
+                return mock_d_labitems
+            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"):
+                return mock_chartevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"):
+                return mock_d_items
             return pd.DataFrame()
+
         mock_read_csv.side_effect = read_csv_side_effect
 
         # --- Instantiate and Run ---
@@ -349,9 +403,11 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
         self.assertNotIn("heart_rate_std", features.columns)
         self.assertNotIn("systolic_bp_std", features.columns)
 
-
     @patch("utils.config.load_config", return_value=MOCK_CONFIG)
-    @patch("utils.config.load_mappings", return_value={"vital_signs": MOCK_MAPPINGS["vital_signs"]}) # Missing lab_tests
+    @patch(
+        "utils.config.load_mappings",
+        return_value={"vital_signs": MOCK_MAPPINGS["vital_signs"]},
+    )  # Missing lab_tests
     @patch("features.feature_extractors.get_data_path")
     @patch("features.feature_extractors.pd.read_csv")
     @patch("features.feature_extractors.os.path.exists")
@@ -360,28 +416,76 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
     ):
         # --- Setup Mocks (similar setup) ---
         mock_exists.return_value = True
+
         def get_path_side_effect(data_type, dataset, config):
-             if data_type == "processed":
-                 if dataset == "admission_data": return "mock/processed/admission_data.csv"
-                 if dataset == "icu_data": return "mock/processed/icu_data.csv"
-             elif data_type == "raw":
-                 if dataset == "mimic_iii": return "mock/raw/mimic_iii"
-             return f"mock/{data_type}/{dataset}"
+            if data_type == "processed":
+                if dataset == "admission_data":
+                    return "mock/processed/admission_data.csv"
+                if dataset == "icu_data":
+                    return "mock/processed/icu_data.csv"
+            elif data_type == "raw":
+                if dataset == "mimic_iii":
+                    return "mock/raw/mimic_iii"
+            return f"mock/{data_type}/{dataset}"
+
         mock_get_path.side_effect = get_path_side_effect
         mock_admissions = pd.DataFrame({"subject_id": [1], "hadm_id": [101]})
-        mock_icustays = pd.DataFrame({"subject_id": [1], "hadm_id": [101], "stay_id": [1001], "intime": [datetime(2023, 1, 1, 12, 0, 0)], "outtime": [datetime(2023, 1, 3, 12, 0, 0)]})
-        mock_labevents = pd.DataFrame({"subject_id": [1, 1], "hadm_id": [101, 101], "itemid": [50809, 50971], "charttime": [datetime(2023, 1, 1, 14, 0, 0), datetime(2023, 1, 1, 16, 0, 0)], "valuenum": [120.0, 4.5]})
-        mock_d_labitems = pd.DataFrame({"itemid": [50809, 50971], "label": ["Glucose", "Potassium"]})
-        mock_chartevents = pd.DataFrame({"subject_id": [1, 1], "hadm_id": [101, 101], "stay_id": [1001, 1001], "itemid": [211, 51], "charttime": [datetime(2023, 1, 1, 13, 0, 0), datetime(2023, 1, 1, 13, 5, 0)], "valuenum": [80.0, 120.0]})
-        mock_d_items = pd.DataFrame({"itemid": [211, 51], "label": ["Heart Rate", "Arterial BP Systolic"]})
+        mock_icustays = pd.DataFrame(
+            {
+                "subject_id": [1],
+                "hadm_id": [101],
+                "stay_id": [1001],
+                "intime": [datetime(2023, 1, 1, 12, 0, 0)],
+                "outtime": [datetime(2023, 1, 3, 12, 0, 0)],
+            }
+        )
+        mock_labevents = pd.DataFrame(
+            {
+                "subject_id": [1, 1],
+                "hadm_id": [101, 101],
+                "itemid": [50809, 50971],
+                "charttime": [
+                    datetime(2023, 1, 1, 14, 0, 0),
+                    datetime(2023, 1, 1, 16, 0, 0),
+                ],
+                "valuenum": [120.0, 4.5],
+            }
+        )
+        mock_d_labitems = pd.DataFrame(
+            {"itemid": [50809, 50971], "label": ["Glucose", "Potassium"]}
+        )
+        mock_chartevents = pd.DataFrame(
+            {
+                "subject_id": [1, 1],
+                "hadm_id": [101, 101],
+                "stay_id": [1001, 1001],
+                "itemid": [211, 51],
+                "charttime": [
+                    datetime(2023, 1, 1, 13, 0, 0),
+                    datetime(2023, 1, 1, 13, 5, 0),
+                ],
+                "valuenum": [80.0, 120.0],
+            }
+        )
+        mock_d_items = pd.DataFrame(
+            {"itemid": [211, 51], "label": ["Heart Rate", "Arterial BP Systolic"]}
+        )
+
         def read_csv_side_effect(path, **kwargs):
-            if path == "mock/processed/admission_data.csv": return mock_admissions
-            if path == "mock/processed/icu_data.csv": return mock_icustays
-            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"): return mock_labevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"): return mock_d_labitems
-            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"): return mock_chartevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"): return mock_d_items
+            if path == "mock/processed/admission_data.csv":
+                return mock_admissions
+            if path == "mock/processed/icu_data.csv":
+                return mock_icustays
+            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"):
+                return mock_labevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"):
+                return mock_d_labitems
+            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"):
+                return mock_chartevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"):
+                return mock_d_items
             return pd.DataFrame()
+
         mock_read_csv.side_effect = read_csv_side_effect
 
         # --- Instantiate and Run ---
@@ -394,12 +498,18 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
         # Assert that lab sequence features are missing, but vital sequence features are present
         self.assertNotIn("lab_Glucose_sequence_data", features.columns)
         self.assertNotIn("lab_Potassium_sequence_data", features.columns)
-        self.assertIn("vital_heart_rate_sequence_data", features.columns) # Corrected name
-        self.assertIn("vital_systolic_bp_sequence_data", features.columns) # Corrected name
-
+        self.assertIn(
+            "vital_heart_rate_sequence_data", features.columns
+        )  # Corrected name
+        self.assertIn(
+            "vital_systolic_bp_sequence_data", features.columns
+        )  # Corrected name
 
     @patch("utils.config.load_config", return_value=MOCK_CONFIG)
-    @patch("utils.config.load_mappings", return_value={"lab_tests": MOCK_MAPPINGS["lab_tests"]}) # Missing vital_signs
+    @patch(
+        "utils.config.load_mappings",
+        return_value={"lab_tests": MOCK_MAPPINGS["lab_tests"]},
+    )  # Missing vital_signs
     @patch("features.feature_extractors.get_data_path")
     @patch("features.feature_extractors.pd.read_csv")
     @patch("features.feature_extractors.os.path.exists")
@@ -408,28 +518,76 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
     ):
         # --- Setup Mocks (similar setup) ---
         mock_exists.return_value = True
+
         def get_path_side_effect(data_type, dataset, config):
-             if data_type == "processed":
-                 if dataset == "admission_data": return "mock/processed/admission_data.csv"
-                 if dataset == "icu_data": return "mock/processed/icu_data.csv"
-             elif data_type == "raw":
-                 if dataset == "mimic_iii": return "mock/raw/mimic_iii"
-             return f"mock/{data_type}/{dataset}"
+            if data_type == "processed":
+                if dataset == "admission_data":
+                    return "mock/processed/admission_data.csv"
+                if dataset == "icu_data":
+                    return "mock/processed/icu_data.csv"
+            elif data_type == "raw":
+                if dataset == "mimic_iii":
+                    return "mock/raw/mimic_iii"
+            return f"mock/{data_type}/{dataset}"
+
         mock_get_path.side_effect = get_path_side_effect
         mock_admissions = pd.DataFrame({"subject_id": [1], "hadm_id": [101]})
-        mock_icustays = pd.DataFrame({"subject_id": [1], "hadm_id": [101], "stay_id": [1001], "intime": [datetime(2023, 1, 1, 12, 0, 0)], "outtime": [datetime(2023, 1, 3, 12, 0, 0)]})
-        mock_labevents = pd.DataFrame({"subject_id": [1, 1], "hadm_id": [101, 101], "itemid": [50809, 50971], "charttime": [datetime(2023, 1, 1, 14, 0, 0), datetime(2023, 1, 1, 16, 0, 0)], "valuenum": [120.0, 4.5]})
-        mock_d_labitems = pd.DataFrame({"itemid": [50809, 50971], "label": ["Glucose", "Potassium"]})
-        mock_chartevents = pd.DataFrame({"subject_id": [1, 1], "hadm_id": [101, 101], "stay_id": [1001, 1001], "itemid": [211, 51], "charttime": [datetime(2023, 1, 1, 13, 0, 0), datetime(2023, 1, 1, 13, 5, 0)], "valuenum": [80.0, 120.0]})
-        mock_d_items = pd.DataFrame({"itemid": [211, 51], "label": ["Heart Rate", "Arterial BP Systolic"]})
+        mock_icustays = pd.DataFrame(
+            {
+                "subject_id": [1],
+                "hadm_id": [101],
+                "stay_id": [1001],
+                "intime": [datetime(2023, 1, 1, 12, 0, 0)],
+                "outtime": [datetime(2023, 1, 3, 12, 0, 0)],
+            }
+        )
+        mock_labevents = pd.DataFrame(
+            {
+                "subject_id": [1, 1],
+                "hadm_id": [101, 101],
+                "itemid": [50809, 50971],
+                "charttime": [
+                    datetime(2023, 1, 1, 14, 0, 0),
+                    datetime(2023, 1, 1, 16, 0, 0),
+                ],
+                "valuenum": [120.0, 4.5],
+            }
+        )
+        mock_d_labitems = pd.DataFrame(
+            {"itemid": [50809, 50971], "label": ["Glucose", "Potassium"]}
+        )
+        mock_chartevents = pd.DataFrame(
+            {
+                "subject_id": [1, 1],
+                "hadm_id": [101, 101],
+                "stay_id": [1001, 1001],
+                "itemid": [211, 51],
+                "charttime": [
+                    datetime(2023, 1, 1, 13, 0, 0),
+                    datetime(2023, 1, 1, 13, 5, 0),
+                ],
+                "valuenum": [80.0, 120.0],
+            }
+        )
+        mock_d_items = pd.DataFrame(
+            {"itemid": [211, 51], "label": ["Heart Rate", "Arterial BP Systolic"]}
+        )
+
         def read_csv_side_effect(path, **kwargs):
-            if path == "mock/processed/admission_data.csv": return mock_admissions
-            if path == "mock/processed/icu_data.csv": return mock_icustays
-            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"): return mock_labevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"): return mock_d_labitems
-            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"): return mock_chartevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"): return mock_d_items
+            if path == "mock/processed/admission_data.csv":
+                return mock_admissions
+            if path == "mock/processed/icu_data.csv":
+                return mock_icustays
+            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"):
+                return mock_labevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"):
+                return mock_d_labitems
+            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"):
+                return mock_chartevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"):
+                return mock_d_items
             return pd.DataFrame()
+
         mock_read_csv.side_effect = read_csv_side_effect
 
         # --- Instantiate and Run ---
@@ -442,12 +600,17 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
         # Assert that vital sequence features are missing, but lab sequence features are present
         self.assertIn("lab_Glucose_sequence_data", features.columns)
         self.assertIn("lab_Potassium_sequence_data", features.columns)
-        self.assertNotIn("vital_heart_rate_sequence_data", features.columns) # Corrected name
-        self.assertNotIn("vital_systolic_bp_sequence_data", features.columns) # Corrected name
-
+        self.assertNotIn(
+            "vital_heart_rate_sequence_data", features.columns
+        )  # Corrected name
+        self.assertNotIn(
+            "vital_systolic_bp_sequence_data", features.columns
+        )  # Corrected name
 
     @patch("utils.config.load_config", return_value=MOCK_CONFIG)
-    @patch("utils.config.load_mappings", return_value=MOCK_MAPPINGS) # Use full mappings
+    @patch(
+        "utils.config.load_mappings", return_value=MOCK_MAPPINGS
+    )  # Use full mappings
     @patch("features.feature_extractors.get_data_path")
     @patch("features.feature_extractors.pd.read_csv")
     @patch("features.feature_extractors.os.path.exists")
@@ -456,37 +619,77 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
     ):
         # --- Setup Mocks ---
         mock_exists.return_value = True
+
         def get_path_side_effect(data_type, dataset, config):
-             if data_type == "processed":
-                 if dataset == "admission_data": return "mock/processed/admission_data.csv"
-                 if dataset == "icu_data": return "mock/processed/icu_data.csv"
-             elif data_type == "raw":
-                 if dataset == "mimic_iii": return "mock/raw/mimic_iii"
-             return f"mock/{data_type}/{dataset}"
+            if data_type == "processed":
+                if dataset == "admission_data":
+                    return "mock/processed/admission_data.csv"
+                if dataset == "icu_data":
+                    return "mock/processed/icu_data.csv"
+            elif data_type == "raw":
+                if dataset == "mimic_iii":
+                    return "mock/raw/mimic_iii"
+            return f"mock/{data_type}/{dataset}"
+
         mock_get_path.side_effect = get_path_side_effect
 
         # Mock dataframes - Add an unmapped lab itemid (99999)
         mock_admissions = pd.DataFrame({"subject_id": [1], "hadm_id": [101]})
-        mock_icustays = pd.DataFrame({"subject_id": [1], "hadm_id": [101], "stay_id": [1001], "intime": [datetime(2023, 1, 1, 12, 0, 0)], "outtime": [datetime(2023, 1, 3, 12, 0, 0)]})
-        mock_labevents = pd.DataFrame({
-            "subject_id": [1, 1, 1],
-            "hadm_id": [101, 101, 101],
-            "itemid": [50809, 50971, 99999], # Glucose, Potassium, Unmapped
-            "charttime": [datetime(2023, 1, 1, 14, 0, 0), datetime(2023, 1, 1, 16, 0, 0), datetime(2023, 1, 1, 17, 0, 0)],
-            "valuenum": [120.0, 4.5, 10.0]
-        })
-        mock_d_labitems = pd.DataFrame({"itemid": [50809, 50971, 99999], "label": ["Glucose", "Potassium", "Unknown"]})
-        mock_chartevents = pd.DataFrame({"subject_id": [1], "hadm_id": [101], "stay_id": [1001], "itemid": [211], "charttime": [datetime(2023, 1, 1, 13, 0, 0)], "valuenum": [80.0]})
+        mock_icustays = pd.DataFrame(
+            {
+                "subject_id": [1],
+                "hadm_id": [101],
+                "stay_id": [1001],
+                "intime": [datetime(2023, 1, 1, 12, 0, 0)],
+                "outtime": [datetime(2023, 1, 3, 12, 0, 0)],
+            }
+        )
+        mock_labevents = pd.DataFrame(
+            {
+                "subject_id": [1, 1, 1],
+                "hadm_id": [101, 101, 101],
+                "itemid": [50809, 50971, 99999],  # Glucose, Potassium, Unmapped
+                "charttime": [
+                    datetime(2023, 1, 1, 14, 0, 0),
+                    datetime(2023, 1, 1, 16, 0, 0),
+                    datetime(2023, 1, 1, 17, 0, 0),
+                ],
+                "valuenum": [120.0, 4.5, 10.0],
+            }
+        )
+        mock_d_labitems = pd.DataFrame(
+            {
+                "itemid": [50809, 50971, 99999],
+                "label": ["Glucose", "Potassium", "Unknown"],
+            }
+        )
+        mock_chartevents = pd.DataFrame(
+            {
+                "subject_id": [1],
+                "hadm_id": [101],
+                "stay_id": [1001],
+                "itemid": [211],
+                "charttime": [datetime(2023, 1, 1, 13, 0, 0)],
+                "valuenum": [80.0],
+            }
+        )
         mock_d_items = pd.DataFrame({"itemid": [211], "label": ["Heart Rate"]})
 
         def read_csv_side_effect(path, **kwargs):
-            if path == "mock/processed/admission_data.csv": return mock_admissions
-            if path == "mock/processed/icu_data.csv": return mock_icustays
-            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"): return mock_labevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"): return mock_d_labitems
-            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"): return mock_chartevents
-            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"): return mock_d_items
+            if path == "mock/processed/admission_data.csv":
+                return mock_admissions
+            if path == "mock/processed/icu_data.csv":
+                return mock_icustays
+            if path == os.path.join("mock/raw/mimic_iii", "LABEVENTS.csv"):
+                return mock_labevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_LABITEMS.csv"):
+                return mock_d_labitems
+            if path == os.path.join("mock/raw/mimic_iii", "CHARTEVENTS.csv"):
+                return mock_chartevents
+            if path == os.path.join("mock/raw/mimic_iii", "D_ITEMS.csv"):
+                return mock_d_items
             return pd.DataFrame()
+
         mock_read_csv.side_effect = read_csv_side_effect
 
         # --- Instantiate and Run ---
@@ -499,20 +702,28 @@ class TestClinicalFeatureExtractor(unittest.TestCase):
         # Assert that mapped sequence features are present
         self.assertIn("lab_Glucose_sequence_data", features.columns)
         self.assertIn("lab_Potassium_sequence_data", features.columns)
-        self.assertIn("vital_heart_rate_sequence_data", features.columns) # Corrected name
+        self.assertIn(
+            "vital_heart_rate_sequence_data", features.columns
+        )  # Corrected name
         # Assert that the unmapped itemid did not create a sequence feature column
-        self.assertNotIn("lab_Unknown_sequence_data", features.columns) # Based on label in mock D_LABITEMS
-        self.assertNotIn("lab_99999_sequence_data", features.columns) # Based on itemid
+        self.assertNotIn(
+            "lab_Unknown_sequence_data", features.columns
+        )  # Based on label in mock D_LABITEMS
+        self.assertNotIn("lab_99999_sequence_data", features.columns)  # Based on itemid
+
 
 # TODO: Add tests for DiagnosisFeatureExtractor
 # - Mock diagnoses_icd.csv
 # - Test _process_diagnosis_data, _get_icd9_category
 # - Test cases with V codes, E codes, different numeric ranges, invalid codes, missing mappings
 
+
 class TestDiagnosisFeatureExtractor(unittest.TestCase):
 
     @patch("utils.config.load_config", return_value=MOCK_CONFIG)
-    @patch("utils.config.load_mappings", return_value=MOCK_MAPPINGS) # Use mock mappings
+    @patch(
+        "utils.config.load_mappings", return_value=MOCK_MAPPINGS
+    )  # Use mock mappings
     @patch("features.feature_extractors.get_data_path")
     @patch("features.feature_extractors.pd.read_csv")
     @patch("features.feature_extractors.os.path.exists")
@@ -521,32 +732,42 @@ class TestDiagnosisFeatureExtractor(unittest.TestCase):
     ):
         # --- Setup Mocks ---
         mock_exists.return_value = True
+
         def get_path_side_effect(data_type, dataset, config):
             if data_type == "processed" and dataset == "admission_data":
                 return "mock/processed/admission_data.csv"
             elif data_type == "raw" and dataset == "mimic_iii":
                 return "mock/raw/mimic_iii"
             return f"mock/{data_type}/{dataset}"
+
         mock_get_path.side_effect = get_path_side_effect
 
         mock_admissions = pd.DataFrame({"subject_id": [1, 2], "hadm_id": [101, 102]})
-        mock_diagnoses = pd.DataFrame({
-            "subject_id": [1, 1, 2, 2],
-            "hadm_id": [101, 101, 102, 102],
-            "seq_num": [1, 2, 1, 2],
-            "icd9_code": ["042", "100", "V3000", "E8800"], # HIV, TB, Single liveborn, Fall
-            "icd_version": [9, 9, 9, 9]
-        })
+        mock_diagnoses = pd.DataFrame(
+            {
+                "subject_id": [1, 1, 2, 2],
+                "hadm_id": [101, 101, 102, 102],
+                "seq_num": [1, 2, 1, 2],
+                "icd9_code": [
+                    "042",
+                    "100",
+                    "V3000",
+                    "E8800",
+                ],  # HIV, TB, Single liveborn, Fall
+                "icd_version": [9, 9, 9, 9],
+            }
+        )
 
         def read_csv_side_effect(path, **kwargs):
             if path == "mock/processed/admission_data.csv":
                 return mock_admissions
             # Use os.path.join for OS compatibility
             if path == os.path.join("mock/raw/mimic_iii", "DIAGNOSES_ICD.csv"):
-                 # Filter by version 9 as the extractor does
-                return mock_diagnoses[mock_diagnoses['icd_version'] == 9]
+                # Filter by version 9 as the extractor does
+                return mock_diagnoses[mock_diagnoses["icd_version"] == 9]
             print(f"Warning: Unmocked read_csv call for path: {path}")
             return pd.DataFrame()
+
         mock_read_csv.side_effect = read_csv_side_effect
 
         # --- Instantiate and Run ---
@@ -560,43 +781,66 @@ class TestDiagnosisFeatureExtractor(unittest.TestCase):
         self.assertIn("subject_id", features.columns)
         self.assertIn("hadm_id", features.columns)
         # Check for expected category columns based on MOCK_MAPPINGS
-        self.assertIn("diag_category_infectious_diseases", features.columns) # Check sanitized name from "Infectious Diseases"
+        self.assertIn(
+            "diag_category_infectious_diseases", features.columns
+        )  # Check sanitized name from "Infectious Diseases"
         # Check other potential columns based on processing logic (e.g., count)
         self.assertIn("diag_count", features.columns)
 
         # Check values for hadm_id 101 (Infectious=1, count=2)
         hadm101 = features[features["hadm_id"] == 101].iloc[0]
-        self.assertEqual(hadm101["diag_category_infectious_diseases"], 1) # Check sanitized name
+        self.assertEqual(
+            hadm101["diag_category_infectious_diseases"], 1
+        )  # Check sanitized name
         self.assertEqual(hadm101["diag_count"], 2)
 
         # Check values for hadm_id 102 (Infectious=0, count=2 - V/E codes might be counted)
         hadm102 = features[features["hadm_id"] == 102].iloc[0]
-        self.assertEqual(hadm102["diag_category_infectious_diseases"], 0) # Check sanitized name
+        self.assertEqual(
+            hadm102["diag_category_infectious_diseases"], 0
+        )  # Check sanitized name
         # Assuming V/E codes are counted by default implementation
         self.assertEqual(hadm102["diag_count"], 2)
 
-
     @patch("utils.config.load_config", return_value=MOCK_CONFIG)
-    @patch("utils.config.load_mappings", return_value={"lab_tests": {}, "vital_signs": {}}) # Missing icd9_categories
+    @patch(
+        "utils.config.load_mappings", return_value={"lab_tests": {}, "vital_signs": {}}
+    )  # Missing icd9_categories
     @patch("features.feature_extractors.get_data_path")
     @patch("features.feature_extractors.pd.read_csv")
     @patch("features.feature_extractors.os.path.exists")
     def test_extract_diagnosis_features_missing_mapping(
         self, mock_exists, mock_read_csv, mock_get_path, mock_load_map, mock_load_cfg
     ):
-         # --- Setup Mocks (similar setup) ---
+        # --- Setup Mocks (similar setup) ---
         mock_exists.return_value = True
+
         def get_path_side_effect(data_type, dataset, config):
-            if data_type == "processed" and dataset == "admission_data": return "mock/processed/admission_data.csv"
-            elif data_type == "raw" and dataset == "mimic_iii": return "mock/raw/mimic_iii"
+            if data_type == "processed" and dataset == "admission_data":
+                return "mock/processed/admission_data.csv"
+            elif data_type == "raw" and dataset == "mimic_iii":
+                return "mock/raw/mimic_iii"
             return f"mock/{data_type}/{dataset}"
+
         mock_get_path.side_effect = get_path_side_effect
         mock_admissions = pd.DataFrame({"subject_id": [1], "hadm_id": [101]})
-        mock_diagnoses = pd.DataFrame({"subject_id": [1], "hadm_id": [101], "seq_num": [1], "icd9_code": ["100"], "icd_version": [9]})
+        mock_diagnoses = pd.DataFrame(
+            {
+                "subject_id": [1],
+                "hadm_id": [101],
+                "seq_num": [1],
+                "icd9_code": ["100"],
+                "icd_version": [9],
+            }
+        )
+
         def read_csv_side_effect(path, **kwargs):
-            if path == "mock/processed/admission_data.csv": return mock_admissions
-            if path == os.path.join("mock/raw/mimic_iii", "DIAGNOSES_ICD.csv"): return mock_diagnoses[mock_diagnoses['icd_version'] == 9]
+            if path == "mock/processed/admission_data.csv":
+                return mock_admissions
+            if path == os.path.join("mock/raw/mimic_iii", "DIAGNOSES_ICD.csv"):
+                return mock_diagnoses[mock_diagnoses["icd_version"] == 9]
             return pd.DataFrame()
+
         mock_read_csv.side_effect = read_csv_side_effect
 
         # --- Instantiate and Run ---
@@ -612,8 +856,9 @@ class TestDiagnosisFeatureExtractor(unittest.TestCase):
         self.assertIn("subject_id", features.columns)
         self.assertIn("hadm_id", features.columns)
         self.assertIn("diag_count", features.columns)
-        self.assertEqual(features.iloc[0]["diag_count"], 1) # Should be 1 based on input data, even if mappings are missing
-
+        self.assertEqual(
+            features.iloc[0]["diag_count"], 1
+        )  # Should be 1 based on input data, even if mappings are missing
 
     @patch("utils.config.load_config", return_value=MOCK_CONFIG)
     @patch("utils.config.load_mappings", return_value=MOCK_MAPPINGS)
@@ -625,22 +870,29 @@ class TestDiagnosisFeatureExtractor(unittest.TestCase):
     ):
         # --- Setup Mocks ---
         mock_exists.return_value = True
+
         def get_path_side_effect(data_type, dataset, config):
-            if data_type == "processed" and dataset == "admission_data": return "mock/processed/admission_data.csv"
-            elif data_type == "raw" and dataset == "mimic_iii": return "mock/raw/mimic_iii"
+            if data_type == "processed" and dataset == "admission_data":
+                return "mock/processed/admission_data.csv"
+            elif data_type == "raw" and dataset == "mimic_iii":
+                return "mock/raw/mimic_iii"
             return f"mock/{data_type}/{dataset}"
+
         mock_get_path.side_effect = get_path_side_effect
 
         mock_admissions = pd.DataFrame({"subject_id": [1], "hadm_id": [101]})
         # Return empty dataframe for diagnoses
-        mock_empty_diagnoses = pd.DataFrame(columns=["subject_id", "hadm_id", "seq_num", "icd9_code", "icd_version"])
+        mock_empty_diagnoses = pd.DataFrame(
+            columns=["subject_id", "hadm_id", "seq_num", "icd9_code", "icd_version"]
+        )
 
         def read_csv_side_effect(path, **kwargs):
             if path == "mock/processed/admission_data.csv":
                 return mock_admissions
             if path == os.path.join("mock/raw/mimic_iii", "DIAGNOSES_ICD.csv"):
-                return mock_empty_diagnoses # Return empty
+                return mock_empty_diagnoses  # Return empty
             return pd.DataFrame()
+
         mock_read_csv.side_effect = read_csv_side_effect
 
         # --- Instantiate and Run ---
@@ -649,10 +901,14 @@ class TestDiagnosisFeatureExtractor(unittest.TestCase):
 
         # --- Assertions ---
         self.assertIsInstance(features, pd.DataFrame)
-        self.assertEqual(len(features), 1) # Should still have the admission row
+        self.assertEqual(len(features), 1)  # Should still have the admission row
         # Check that category columns exist but are 0
-        self.assertIn("diag_category_infectious_diseases", features.columns) # Check sanitized name
-        self.assertEqual(features.iloc[0]["diag_category_infectious_diseases"], 0) # Check sanitized name
+        self.assertIn(
+            "diag_category_infectious_diseases", features.columns
+        )  # Check sanitized name
+        self.assertEqual(
+            features.iloc[0]["diag_category_infectious_diseases"], 0
+        )  # Check sanitized name
         # Check count is 0
         self.assertIn("diag_count", features.columns)
         self.assertEqual(features.iloc[0]["diag_count"], 0)

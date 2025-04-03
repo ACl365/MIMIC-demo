@@ -9,13 +9,18 @@ available models, saving the predictions to CSV files.
 
 import argparse
 import os
-from typing import Dict, Optional, Union, Any # Added Union, Any
+from typing import Any, Dict, Optional, Union  # Added Union, Any
 
 import numpy as np
 import pandas as pd
 
 # Import specific model classes and the base class for type hinting
-from src.models.model import BaseModel, LengthOfStayModel, MortalityModel, ReadmissionModel
+from src.models.model import (
+    BaseModel,
+    LengthOfStayModel,
+    MortalityModel,
+    ReadmissionModel,
+)
 from src.utils import get_data_path, get_logger, get_project_root, load_config
 
 logger = get_logger(__name__)
@@ -48,9 +53,7 @@ def load_model(model_type: str, model_path: Optional[str] = None) -> BaseModel:
         # Construct default path (assuming .pkl for standard models)
         # Note: Temporal models might use .pt and require different loading logic handled by their load method
         default_filename = f"{model_type}_model.pkl"
-        model_path = os.path.join(
-            get_project_root(), "models", default_filename
-        )
+        model_path = os.path.join(get_project_root(), "models", default_filename)
         logger.info(f"Model path not specified, using default: {model_path}")
 
     if not os.path.exists(model_path):
@@ -117,11 +120,14 @@ def predict(
 
     # Make predictions
     try:
-        predictions = model.predict(data.copy()) # Pass a copy to avoid modifying original data in predict
+        predictions = model.predict(
+            data.copy()
+        )  # Pass a copy to avoid modifying original data in predict
     except Exception as e:
-        logger.error(f"Error during prediction with {model_type} model: {e}", exc_info=True)
+        logger.error(
+            f"Error during prediction with {model_type} model: {e}", exc_info=True
+        )
         raise ValueError(f"Prediction failed for model type {model_type}") from e
-
 
     # Create output dataframe
     output_data: Dict[str, Any] = {
@@ -135,7 +141,6 @@ def predict(
     output_data[f"{model_type}_prediction"] = predictions
     output = pd.DataFrame(output_data)
 
-
     # Save predictions if output path is provided
     if output_path is not None:
         try:
@@ -145,14 +150,17 @@ def predict(
             output.to_csv(output_path, index=False)
             logger.info(f"Saved predictions to {output_path}")
         except Exception as e:
-            logger.error(f"Failed to save predictions to {output_path}: {e}", exc_info=True)
-
+            logger.error(
+                f"Failed to save predictions to {output_path}: {e}", exc_info=True
+            )
 
     return output
 
 
 def predict_all(
-    data: pd.DataFrame, config: Optional[Dict[str, Any]] = None, output_dir: Optional[str] = None
+    data: pd.DataFrame,
+    config: Optional[Dict[str, Any]] = None,
+    output_dir: Optional[str] = None,
 ) -> Dict[str, pd.DataFrame]:
     """
     Load all available models (readmission, mortality, los) and generate predictions.
@@ -182,25 +190,36 @@ def predict_all(
 
     # Make predictions with each model
     predictions: Dict[str, pd.DataFrame] = {}
-    model_types_to_predict = ["readmission", "mortality", "los"] # Add other types if needed
+    model_types_to_predict = [
+        "readmission",
+        "mortality",
+        "los",
+    ]  # Add other types if needed
 
     for model_type in model_types_to_predict:
         try:
             output_path = os.path.join(output_dir, f"{model_type}_predictions.csv")
             # Assuming default model paths are used if specific paths not in config
-            model_path = os.path.join(get_project_root(), "models", f"{model_type}_model.pkl")
+            model_path = os.path.join(
+                get_project_root(), "models", f"{model_type}_model.pkl"
+            )
             if os.path.exists(model_path):
-                 predictions[model_type] = predict(
-                     data, model_type, model_path=model_path, output_path=output_path
-                 )
+                predictions[model_type] = predict(
+                    data, model_type, model_path=model_path, output_path=output_path
+                )
             else:
-                 logger.warning(f"{model_type.capitalize()} model not found at default path {model_path}, skipping predictions.")
+                logger.warning(
+                    f"{model_type.capitalize()} model not found at default path {model_path}, skipping predictions."
+                )
 
         except FileNotFoundError:
-            logger.warning(f"{model_type.capitalize()} model not found, skipping predictions.")
+            logger.warning(
+                f"{model_type.capitalize()} model not found, skipping predictions."
+            )
         except Exception as e:
-             logger.error(f"Error predicting with {model_type} model: {e}", exc_info=True)
-
+            logger.error(
+                f"Error predicting with {model_type} model: {e}", exc_info=True
+            )
 
     # Combine predictions into a single file
     if predictions:
@@ -208,7 +227,7 @@ def predict_all(
         first_key = list(predictions.keys())[0]
         base_ids = ["subject_id", "hadm_id"]
         if "stay_id" in predictions[first_key].columns:
-             base_ids.append("stay_id")
+            base_ids.append("stay_id")
         combined = predictions[first_key][base_ids + [f"{first_key}_prediction"]].copy()
 
         for model_type, preds_df in predictions.items():
@@ -218,12 +237,12 @@ def predict_all(
                     # Merge predictions based on available IDs
                     merge_on = ["subject_id", "hadm_id"]
                     if "stay_id" in base_ids and "stay_id" in preds_df.columns:
-                         merge_on.append("stay_id")
+                        merge_on.append("stay_id")
                     combined = pd.merge(
-                         combined,
-                         preds_df[merge_on + [pred_col_name]],
-                         on=merge_on,
-                         how="left" # Keep all rows from the first prediction set
+                        combined,
+                        preds_df[merge_on + [pred_col_name]],
+                        on=merge_on,
+                        how="left",  # Keep all rows from the first prediction set
                     )
 
         try:
@@ -231,11 +250,10 @@ def predict_all(
             combined.to_csv(combined_output_path, index=False)
             logger.info(f"Saved combined predictions to {combined_output_path}")
         except Exception as e:
-             logger.error(f"Failed to save combined predictions: {e}", exc_info=True)
+            logger.error(f"Failed to save combined predictions: {e}", exc_info=True)
 
     else:
         logger.warning("No predictions were generated to combine.")
-
 
     return predictions
 
@@ -255,15 +273,26 @@ def main() -> None:
     parser.add_argument(
         "--model",
         type=str,
-        choices=["readmission", "mortality", "los", "all"], # Add other valid model types here
+        choices=[
+            "readmission",
+            "mortality",
+            "los",
+            "all",
+        ],  # Add other valid model types here
         default="all",
         help="Type of model to use for prediction (default: all)",
     )
     parser.add_argument(
-        "--input", type=str, default=None, help="Path to input data CSV file (default: combined_features.csv)"
+        "--input",
+        type=str,
+        default=None,
+        help="Path to input data CSV file (default: combined_features.csv)",
     )
     parser.add_argument(
-        "--output", type=str, default=None, help="Directory to save prediction CSV files (default: ./predictions)"
+        "--output",
+        type=str,
+        default=None,
+        help="Directory to save prediction CSV files (default: ./predictions)",
     )
     args = parser.parse_args()
 
@@ -284,12 +313,13 @@ def main() -> None:
         data = pd.read_csv(input_path)
         logger.info(f"Data loaded successfully from {input_path}. Shape: {data.shape}")
     except FileNotFoundError:
-        logger.error(f"Input data file not found at {input_path}. Cannot make predictions.")
+        logger.error(
+            f"Input data file not found at {input_path}. Cannot make predictions."
+        )
         return
     except Exception as e:
         logger.error(f"Error loading input data from {input_path}: {e}", exc_info=True)
         return
-
 
     # Make predictions
     if args.model == "all":
@@ -300,14 +330,20 @@ def main() -> None:
             output_path = os.path.join(args.output, f"{args.model}_predictions.csv")
 
         try:
-            predictions = {args.model: predict(data, args.model, output_path=output_path)}
+            predictions = {
+                args.model: predict(data, args.model, output_path=output_path)
+            }
         except (FileNotFoundError, ValueError) as e:
-             logger.error(f"Could not generate predictions for model '{args.model}': {e}")
-             predictions = {} # Ensure predictions is defined even on error
+            logger.error(
+                f"Could not generate predictions for model '{args.model}': {e}"
+            )
+            predictions = {}  # Ensure predictions is defined even on error
         except Exception as e:
-             logger.error(f"An unexpected error occurred during prediction for model '{args.model}': {e}", exc_info=True)
-             predictions = {}
-
+            logger.error(
+                f"An unexpected error occurred during prediction for model '{args.model}': {e}",
+                exc_info=True,
+            )
+            predictions = {}
 
     # Print prediction summary
     if predictions:
@@ -326,12 +362,18 @@ def main() -> None:
                     elif model_type == "los":
                         mean_los = preds[pred_col].mean()
                         median_los = preds[pred_col].median()
-                        logger.info(f"  Mean predicted length of stay: {mean_los:.2f} days")
-                        logger.info(f"  Median predicted length of stay: {median_los:.2f} days")
+                        logger.info(
+                            f"  Mean predicted length of stay: {mean_los:.2f} days"
+                        )
+                        logger.info(
+                            f"  Median predicted length of stay: {median_los:.2f} days"
+                        )
                 else:
-                     logger.warning(f"  Prediction column '{pred_col}' not found in results.")
+                    logger.warning(
+                        f"  Prediction column '{pred_col}' not found in results."
+                    )
             else:
-                 logger.warning("  Prediction DataFrame is empty or None.")
+                logger.warning("  Prediction DataFrame is empty or None.")
         logger.info("--- End Summary ---")
     else:
         logger.warning("No predictions were generated.")

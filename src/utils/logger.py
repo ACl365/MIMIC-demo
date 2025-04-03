@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 from datetime import datetime
-from typing import Optional, Dict, Any # Added Dict, Any for config type hint
+from typing import Any, Dict, Optional  # Added Dict, Any for config type hint
 
 # Import config functions inside methods to avoid circular imports during startup
 # from .config import get_project_root, load_config
@@ -45,13 +45,17 @@ def get_log_level_from_config() -> int:
         level = log_levels.get(log_level_str, logging.INFO)
         # Ensure the retrieved level is actually an int (logging level constant)
         if not isinstance(level, int):
-             print(f"WARNING: Invalid log level string '{log_level_str}' resolved to non-integer. Defaulting to INFO.")
-             return logging.INFO
+            print(
+                f"WARNING: Invalid log level string '{log_level_str}' resolved to non-integer. Defaulting to INFO."
+            )
+            return logging.INFO
         return level
 
     except Exception as e:
         # Default to INFO if there's any error loading/parsing the config
-        print(f"WARNING: Could not load log level from config ({e}). Defaulting to INFO.")
+        print(
+            f"WARNING: Could not load log level from config ({e}). Defaulting to INFO."
+        )
         return logging.INFO
 
 
@@ -99,7 +103,7 @@ def setup_logger(
     # Create formatter
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt='%Y-%m-%d %H:%M:%S' # Add date format
+        datefmt="%Y-%m-%d %H:%M:%S",  # Add date format
     )
 
     # Determine if file output is enabled based on log_file argument
@@ -108,32 +112,37 @@ def setup_logger(
 
     # Add file handler if enabled
     if enable_file_output:
-        actual_log_file_path = log_file # Use provided path if not None
+        actual_log_file_path = log_file  # Use provided path if not None
         if actual_log_file_path is None:
             # Create default log file path if log_file was None
             try:
                 from .config import get_project_root  # Import here
 
                 logs_dir = get_project_root() / "logs"
-                logs_dir.mkdir(exist_ok=True) # Use pathlib's mkdir
+                logs_dir.mkdir(exist_ok=True)  # Use pathlib's mkdir
 
                 # Create log file with timestamp
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 actual_log_file_path = logs_dir / f"{name}_{timestamp}.log"
             except Exception as e:
-                 print(f"ERROR: Could not create default log file path: {e}")
-                 actual_log_file_path = None # Disable file logging if path creation fails
+                print(f"ERROR: Could not create default log file path: {e}")
+                actual_log_file_path = (
+                    None  # Disable file logging if path creation fails
+                )
 
         if actual_log_file_path:
             try:
-                file_handler = logging.FileHandler(str(actual_log_file_path), encoding='utf-8') # Specify encoding
+                file_handler = logging.FileHandler(
+                    str(actual_log_file_path), encoding="utf-8"
+                )  # Specify encoding
                 file_handler.setLevel(log_level)
                 file_handler.setFormatter(formatter)
                 logger.addHandler(file_handler)
                 # print(f"Logging to file: {actual_log_file_path}") # Optional: confirm log file path
             except Exception as e:
-                 print(f"ERROR: Could not set up file handler for {actual_log_file_path}: {e}")
-
+                print(
+                    f"ERROR: Could not set up file handler for {actual_log_file_path}: {e}"
+                )
 
     # Add console handler if requested
     if console_output:
@@ -186,12 +195,14 @@ def get_logger(name: str = "mimic") -> logging.Logger:
                 name,
                 log_level=level,
                 console_output=console_output_enabled,
-                log_file=log_file_path
+                log_file=log_file_path,
             )
         except Exception as e:
             # Fallback to basic setup if config loading or setup fails
-            print(f"WARNING: Error setting up logger from config ({e}). Using default setup.")
-            logger_instance = setup_logger(name) # Basic setup with defaults
+            print(
+                f"WARNING: Error setting up logger from config ({e}). Using default setup."
+            )
+            logger_instance = setup_logger(name)  # Basic setup with defaults
 
     return logger_instance
 

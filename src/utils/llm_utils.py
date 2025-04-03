@@ -10,13 +10,14 @@ environment variable to be set. If unavailable, functions will return None.
 """
 
 import os
-from typing import List, Optional, Tuple, Any # Added Any for openai response type
+from typing import Any, List, Optional, Tuple  # Added Any for openai response type
 
 import numpy as np
 
 # Attempt to import openai, handle if not installed
 try:
     import openai
+
     OPENAI_AVAILABLE = True
     # Check for API key presence during initialization
     if not os.getenv("OPENAI_API_KEY"):
@@ -69,11 +70,11 @@ def format_shap_prompt(
         if abs_shap > 0.1:
             magnitude = "significantly"
         elif abs_shap > 0.02:
-             magnitude = "moderately"
+            magnitude = "moderately"
         else:
-             magnitude = "slightly"
+            magnitude = "slightly"
         # Clean up feature name for readability
-        clean_feature = feature.replace('_', ' ').title()
+        clean_feature = feature.replace("_", " ").title()
         prompt += f"- {clean_feature}: {magnitude} {direction} the predicted risk (SHAP value: {shap_value:.3f})\n"
 
     prompt += "\nPlease provide a concise, one-sentence explanation summarizing the key drivers of this prediction for a clinician, avoiding technical jargon like 'SHAP value'."
@@ -112,12 +113,12 @@ def explain_shap_with_llm(
         ValueError: If the lengths of `shap_values_single` and `feature_names` do not match.
     """
     if not OPENAI_AVAILABLE:
-        logger.warning(
-            "OpenAI library not available. Cannot generate LLM explanation."
-        )
+        logger.warning("OpenAI library not available. Cannot generate LLM explanation.")
         return None
     if not os.getenv("OPENAI_API_KEY"):
-        logger.warning("OPENAI_API_KEY environment variable not set. Cannot generate LLM explanation.")
+        logger.warning(
+            "OPENAI_API_KEY environment variable not set. Cannot generate LLM explanation."
+        )
         return None
 
     if len(shap_values_single) != len(feature_names):
@@ -130,7 +131,9 @@ def explain_shap_with_llm(
         abs_shap = np.abs(shap_values_single)
         # Ensure top_n doesn't exceed the number of features
         actual_top_n = min(top_n, len(feature_names))
-        top_indices = np.argsort(abs_shap)[-actual_top_n:][::-1]  # Indices of top N features
+        top_indices = np.argsort(abs_shap)[-actual_top_n:][
+            ::-1
+        ]  # Indices of top N features
 
         # Get feature names and their corresponding SHAP values
         top_features = [(feature_names[i], shap_values_single[i]) for i in top_indices]
@@ -160,9 +163,11 @@ def explain_shap_with_llm(
             "OpenAI API key invalid or missing. Cannot generate LLM explanation."
         )
         return None
-    except openai.OpenAIError as api_error: # Catch specific OpenAI errors
+    except openai.OpenAIError as api_error:  # Catch specific OpenAI errors
         logger.error(f"OpenAI API error: {api_error}", exc_info=True)
         return None
     except Exception as e:
-        logger.error(f"An unexpected error occurred calling OpenAI API: {e}", exc_info=True)
+        logger.error(
+            f"An unexpected error occurred calling OpenAI API: {e}", exc_info=True
+        )
         return None

@@ -9,7 +9,7 @@ the configured processed data directory.
 
 import argparse
 import os
-from typing import Dict, List, Optional, Any # Added Any
+from typing import Any, Dict, List, Optional  # Added Any
 
 import pandas as pd
 
@@ -61,7 +61,6 @@ def process_data(config: Optional[Dict[str, Any]] = None) -> None:
     except Exception as e:
         logger.error(f"Error processing admission data: {e}", exc_info=True)
 
-
     # Process ICU stay data
     try:
         logger.info("Processing ICU stay data...")
@@ -72,7 +71,6 @@ def process_data(config: Optional[Dict[str, Any]] = None) -> None:
         logger.info("ICU stay data processing complete.")
     except Exception as e:
         logger.error(f"Error processing ICU stay data: {e}", exc_info=True)
-
 
     logger.info("Data processing pipeline completed")
 

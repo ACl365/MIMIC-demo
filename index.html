@@ -22,7 +22,7 @@
                 once: true,
                 mirror: false
             });
-            
+
             // Create interactive PR curve visualization
             if (document.getElementById('interactive-pr-curve')) {
                 var prData = {
@@ -40,7 +40,7 @@
                         size: 8
                     }
                 };
-                
+
                 var baselineData = {
                     x: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
                     y: [1.0, 0.6, 0.4, 0.3, 0.25, 0.2, 0.15, 0.1, 0.08, 0.05, 0],
@@ -57,7 +57,7 @@
                         size: 8
                     }
                 };
-                
+
                 var layout = {
                     title: 'Interactive Precision-Recall Curve',
                     xaxis: {
@@ -82,10 +82,10 @@
                         pad: 4
                     }
                 };
-                
+
                 Plotly.newPlot('interactive-pr-curve', [prData, baselineData], layout, {responsive: true});
             }
-            
+
             // Create feature importance visualization
             if (document.getElementById('feature-importance-chart')) {
                 var options = {
@@ -169,23 +169,23 @@
             --success-color: #10b981; /* Emerald green for success states */
             --warning-color: #f59e0b; /* Amber for warnings */
             --info-color: #06b6d4; /* Cyan for info */
-            
+
             /* Neutral tones */
             --light-gray: #f8fafc;
             --medium-gray: #e2e8f0;
             --dark-gray: #475569;
             --text-color: #1e293b;
-            
+
             /* Gradients */
             --primary-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             --card-gradient: linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0));
-            
+
             /* Typography */
             --heading-font: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             --body-font: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             --code-font: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-            
+
             /* Spacing system */
             --space-xs: 0.25rem;
             --space-sm: 0.5rem;
@@ -194,18 +194,18 @@
             --space-xl: 2rem;
             --space-2xl: 3rem;
             --space-3xl: 5rem;
-            
+
             /* Shadows */
             --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
             --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            
+
             /* Animations */
             --transition-fast: 150ms ease;
             --transition-normal: 250ms ease;
             --transition-slow: 350ms ease;
-            
+
             /* Border radius */
             --radius-sm: 0.25rem;
             --radius-md: 0.5rem;
@@ -215,7 +215,7 @@
         }
 
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-        
+
         body {
             font-family: var(--body-font);
             color: var(--text-color);
@@ -239,7 +239,7 @@
             letter-spacing: -0.025em;
             line-height: 1.2;
         }
-        
+
         h1.display-3 {
             font-size: clamp(2.5rem, 5vw, 3.5rem);
             font-weight: 800;
@@ -249,12 +249,12 @@
             background-clip: text;
             text-fill-color: transparent;
         }
-        
+
         h2.display-5 {
             font-size: clamp(2rem, 4vw, 2.5rem);
             font-weight: 700;
         }
-        
+
         h3.h4 { font-size: 1.5rem; font-weight: 600; }
         h4 { font-size: 1.25rem; font-weight: 600; }
         h5 { font-size: 1.1rem; font-weight: 600; }
@@ -335,7 +335,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .hero::before {
             content: "";
             position: absolute;
@@ -347,23 +347,23 @@
             opacity: 0.4;
             z-index: 0;
         }
-        
+
         .hero .container {
             position: relative;
             z-index: 1;
         }
-        
+
         .hero h1 {
             color: white;
             margin-bottom: 1.5rem;
         }
-        
+
         .hero .lead {
             color: rgba(255, 255, 255, 0.9);
             font-size: 1.25rem;
             margin-bottom: 2rem;
         }
-        
+
         .hero .btn {
             padding: 0.75rem 1.5rem;
             font-weight: 600;
@@ -371,38 +371,38 @@
             transition: all var(--transition-normal);
             box-shadow: var(--shadow-md);
         }
-        
+
         .hero .btn-light {
             background-color: white;
             color: var(--primary-color);
             border: none;
         }
-        
+
         .hero .btn-light:hover {
             background-color: var(--light-gray);
             transform: translateY(-3px);
             box-shadow: var(--shadow-lg);
         }
-        
+
         .hero .btn-outline-light {
             border: 2px solid rgba(255, 255, 255, 0.7);
             color: white;
         }
-        
+
         .hero .btn-outline-light:hover {
             background-color: rgba(255, 255, 255, 0.1);
             border-color: white;
             transform: translateY(-3px);
             box-shadow: var(--shadow-lg);
         }
-        
+
         /* Floating animation for hero elements */
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
             100% { transform: translateY(0px); }
         }
-        
+
         .hero-float {
             animation: float 6s ease-in-out infinite;
         }
@@ -418,7 +418,7 @@
             overflow: hidden;
             position: relative;
         }
-        
+
         .card::after {
             content: '';
             position: absolute;
@@ -431,38 +431,38 @@
             transition: opacity var(--transition-normal);
             pointer-events: none;
         }
-        
+
         .card:hover {
             transform: translateY(-8px);
             box-shadow: var(--shadow-xl);
         }
-        
+
         .card:hover::after {
             opacity: 1;
         }
-        
+
         .card-body {
             padding: 2rem;
             position: relative;
             z-index: 1;
         }
-        
+
         .card-title {
             margin-bottom: 1.25rem;
             color: var(--primary-color);
             font-weight: 700;
         }
-        
+
         .card ul {
             padding-left: 1.2rem;
             margin-bottom: 1.25rem;
         }
-        
+
         .card li {
             margin-bottom: 0.75rem;
             position: relative;
         }
-        
+
         .card li::before {
             content: "•";
             color: var(--secondary-color);
@@ -471,18 +471,18 @@
             width: 1em;
             margin-left: -1em;
         }
-        
+
         .card img {
             margin-top: 0.75rem;
             margin-bottom: 0.75rem;
             border-radius: var(--radius-md);
             transition: transform var(--transition-normal);
         }
-        
+
         .card:hover img {
             transform: scale(1.02);
         }
-        
+
         .card small {
             font-size: 0.85rem;
             color: var(--dark-gray);
@@ -1013,7 +1013,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Card 2: Imbalance Handling Analysis -->
                 <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="200">
                     <div class="card feature-card">
@@ -1045,7 +1045,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Card 3: Causal Inference Exploration -->
                 <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="300">
                     <div class="card feature-card">
@@ -1067,7 +1067,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Card 4: Advanced MLOps Features -->
                 <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="400">
                     <div class="card feature-card">
@@ -1119,7 +1119,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Card 5: Strategic Impact Analysis -->
                 <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="500">
                     <div class="card feature-card">
@@ -1137,7 +1137,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Card 6: Responsible & Explainable AI (XAI) -->
                 <div class="feature-card-wrapper" data-aos="fade-up" data-aos-delay="600">
                     <div class="card feature-card">
@@ -1149,7 +1149,7 @@
                         </div>
                         <div class="feature-content">
                             <p>Integrating fairness, calibration, and interpretability techniques for responsible and transparent AI.</p>
-                            
+
                             <!-- Compact Grid for Plots -->
                             <div class="row g-2 mt-2">
                                 <!-- Fairness Plot -->
@@ -1315,9 +1315,9 @@ jobs:
                         <div class="card-body">
                             <h3 class="h4 mb-4">Feature Importance Analysis</h3>
                             <p class="mb-4">Understanding which features contribute most to the model's predictions is crucial for both model improvement and clinical interpretation:</p>
-                            
+
                             <div id="feature-importance-chart"></div>
-                            
+
                             <p class="mt-3">The chart above shows the relative importance of each feature in the final model. Length of stay and age are the strongest predictors of readmission risk, followed by the number of procedures and medications.</p>
                         </div>
                     </div>
