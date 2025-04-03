@@ -23,7 +23,7 @@
                 mirror: false
             });
 
-            // Create interactive PR curve visualization
+            // Create interactive PR curve visualisation
             if (document.getElementById('interactive-pr-curve')) {
                 var prData = {
                     x: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
@@ -86,7 +86,7 @@
                 Plotly.newPlot('interactive-pr-curve', [prData, baselineData], layout, {responsive: true});
             }
 
-            // Create feature importance visualization
+            // Create feature importance visualisation
             if (document.getElementById('feature-importance-chart')) {
                 var options = {
                     series: [{
@@ -499,7 +499,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-left: auto; /* Center align */
+            margin-left: auto; /* Centre align */
             margin-right: auto;
             margin-bottom: 1.5rem;
             font-size: 1.75rem; /* Slightly smaller icon size */
@@ -540,7 +540,7 @@
         .timeline::before {
             content: "";
             position: absolute;
-            left: 0.5rem; /* Align with center of dot */
+            left: 0.5rem; /* Align with centre of dot */
             top: 0.5rem;
             width: 2px;
             height: calc(100% - 1rem); /* Adjust height */
@@ -715,7 +715,7 @@
            max-height: 150px;
        }
 
-       /* Add subtle color coding to card headers */
+       /* Add subtle colour coding to card headers */
        .feature-card:nth-child(1) .feature-icon { background-color: rgba(0, 123, 255, 0.1); }
        .feature-card:nth-child(2) .feature-icon { background-color: rgba(40, 167, 69, 0.1); }
        .feature-card:nth-child(3) .feature-icon { background-color: rgba(255, 193, 7, 0.1); }
@@ -989,10 +989,10 @@
                             <div class="feature-icon mx-auto">
                                 <i class="fas fa-clock"></i>
                             </div>
-                            <h3 class="h4 mb-3 text-center">Advanced Temporal Modeling</h3>
+                            <h3 class="h4 mb-3 text-center">Advanced Temporal Modelling</h3>
                         </div>
                         <div class="feature-content">
-                            <p>Leveraging the sequential nature of EHR data using a <strong>Time-Aware LSTM with Attention</strong> (see <code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/notebooks/time_aware_lstm.py" target="_blank" rel="noopener noreferrer">notebooks/time_aware_lstm.py</a></code>). This approach captures irregular time intervals and identifies critical time points.</p>
+                            <p>Employing the sequential nature of EHR data using a <strong>Time-Aware LSTM with Attention</strong> (see <code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/notebooks/time_aware_lstm.py" target="_blank" rel="noopener noreferrer">notebooks/time_aware_lstm.py</a></code>). This approach captures irregular time intervals and identifies critical time points.</p>
                             <div class="code-block mt-3">
 <pre>class TimeAwareLSTM(nn.Module):
     # ... (Initialization) ...
@@ -1009,7 +1009,7 @@
         output = self.classifier(context)
         return torch.sigmoid(output), attn_weights</pre>
                             </div>
-                            <p class="mt-2"><small>This enhanced model (<code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/notebooks/advanced_temporal_model_enhanced.ipynb" target="_blank" rel="noopener noreferrer">advanced_temporal_model_enhanced.ipynb</a></code>) demonstrates improved performance over static baselines (e.g., LightGBM) by explicitly modeling time dynamics, a critical factor often ignored.</small></p>
+                            <p class="mt-2"><small>This model, integrated into the main training pipeline (<code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/src/models/train_model.py" target="_blank" rel="noopener noreferrer">train_model.py</a></code>), explicitly models time dynamics, a critical factor often ignored. Performance evaluation on the demo dataset is ongoing (see <code><a href="https://github.com/ACl365/MIMIC_demo/blob/main/notebooks/advanced_temporal_model_enhanced.ipynb" target="_blank" rel="noopener noreferrer">notebook</a></code> for initial PoC).</small></p>
                         </div>
                     </div>
                 </div>
@@ -1075,17 +1075,17 @@
                             <div class="feature-icon mx-auto">
                                 <i class="fas fa-cogs"></i>
                             </div>
-                            <h3 class="h4 mb-3 text-center">Advanced MLOps Features</h3>
+                            <h3 class="h4 mb-3 text-center">MLOps Framework Design</h3>
                         </div>
                         <div class="feature-content">
-                            <p>Demonstrating an end-to-end CI/CD pipeline incorporating robust monitoring and deployment strategies for reliability at scale.</p>
+                            <p>Designing an end-to-end MLOps framework including CI/CD, monitoring, and deployment strategies for reliability at scale. Basic MLflow tracking is implemented in training scripts.</p>
                             <div class="row mt-3">
                                 <div class="col-md-12">
-                                    <h5>Drift Monitoring</h5>
+                                    <h5>Conceptual Monitoring Strategy</h5>
                                     <ul>
-                                        <li><strong>Data Drift:</strong> Monitoring key features using <strong>Population Stability Index (PSI)</strong> and statistical tests (e.g., <strong>Kolmogorov-Smirnov</strong>).</li>
-                                        <li><strong>Concept Drift:</strong> Tracking model performance metrics (AUC, F1-score) over time to detect degradation.</li>
-                                        <li><strong>Tools:</strong> Integrated with logging systems and potentially visualized via <strong>Prometheus/Grafana</strong> or specialized tools like <strong>MLflow</strong>.</li>
+                                        <li><strong>Data Drift:</strong> Design includes monitoring key features using <strong>Population Stability Index (PSI)</strong> and statistical tests (e.g., <strong>Kolmogorov-Smirnov</strong>).</li>
+                                        <li><strong>Concept Drift:</strong> Design includes tracking model performance metrics (AUC, F1-score) over time to detect degradation.</li>
+                                        <li><strong>Tooling:</strong> Conceptualised integration with logging systems, <strong>Prometheus/Grafana</strong>, and <strong>MLflow</strong>.</li>
                                     </ul>
                                     <h5 class="mt-4">Conceptual CI/CD Flow</h5>
                                     <div class="cicd-flow d-flex align-items-center justify-content-around text-center mt-3 mb-3 flex-wrap">
@@ -1131,7 +1131,7 @@
                         </div>
                         <div class="feature-content">
                             <p>Connecting model performance to potential real-world value.</p>
-                            <p><strong>Estimated Impact:</strong> Based on the SMOTE-enhanced model's performance (AUC-PR ~0.35 on this subset) and literature values for average readmission costs (~$15,000 per event [cite source]), scaling this pipeline could potentially identify an additional 5-10% of at-risk patients compared to baseline rules. This translates to potential annual savings of $Y million in a large hospital system by enabling targeted interventions (e.g., enhanced discharge planning, follow-up calls).</p>
+                            <p><strong>Estimated Impact:</strong> Based on the SMOTE-enhanced model's performance (AUC-PR ~0.35 on this subset) and reported average readmission costs, scaling this pipeline could potentially identify an additional 5-10% of at-risk patients compared to baseline rules. This could translate to potential annual savings on the order of £100k-£200k per 10,000 relevant patient discharges in a large hospital system by enabling targeted interventions (highly dependent on actual performance and intervention effectiveness).</p>
                             <p><strong>Workflow Integration:</strong> The prediction score output by the API could be integrated into the EHR system as a clinical decision support alert for care coordinators or physicians during discharge planning, flagging high-risk patients for review.</p>
                             <p class="mt-2"><small>See the <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/strategic_impact.md" target="_blank" rel="noopener noreferrer">Strategic Impact Documentation</a> for a detailed breakdown of potential value and integration points, including calculations based on demo data performance (with appropriate caveats).</small></p>
                         </div>
@@ -1207,29 +1207,29 @@
         <div class="container">
             <div class="row">
                 <div class="col-lg-8 mx-auto text-center mb-5">
-                    <h2 class="display-5 fw-bold">Advanced MLOps Pipeline</h2>
+                    <h2 class="display-5 fw-bold">MLOps Pipeline Framework</h2>
                     <p class="lead text-muted">Going beyond basic implementations</p>
                 </div>
             </div>
             <div class="row g-4">
                 <div class="col-lg-6">
                     <div class="card p-4">
-                        <h3 class="h4 mb-3">Model Monitoring & Observability</h3>
+                        <h3 class="h4 mb-3">Monitoring & Observability (Design)</h3>
                         <ul>
-                            <li><strong>Data Drift Detection:</strong> Continuous monitoring using metrics like <strong>Population Stability Index (PSI)</strong> and statistical tests (e.g., <strong>KL Divergence</strong>) for key features.</li>
-                            <li><strong>Concept Drift Detection:</strong> Tracking outcome metrics (e.g., AUC, F1) on incoming data streams compared to validation performance to detect performance degradation.</li>
-                            <li><strong>Operational Metrics:</strong> Monitoring API latency, error rates, and throughput.</li>
-                            <li><strong>Tooling:</strong> Leveraging logging frameworks, <strong>Prometheus/Grafana</strong> for dashboards, and potentially integrating with <strong>MLflow</strong> for drift tracking.</li>
+                            <li><strong>Data Drift Detection Strategy:</strong> Design involves continuous monitoring using metrics like <strong>Population Stability Index (PSI)</strong> and statistical tests (e.g., <strong>Kolmogorov-Smirnov, Chi-squared, KL Divergence</strong>). Conceptualised use of tools like <strong>Evidently AI</strong> for reporting.</li>
+                            <li><strong>Concept Drift Detection Strategy:</strong> Design involves tracking outcome metrics (e.g., AUC, F1) on incoming data streams compared to validation performance.</li>
+                            <li><strong>Operational Metrics Strategy:</strong> Design includes monitoring API latency, error rates, and throughput via <strong>Prometheus/Grafana</strong> dashboards.</li>
+                            <li><strong>Tooling:</strong> Basic MLflow tracking implemented in training scripts. Conceptualised integration with logging frameworks and dashboarding (Grafana) for a comprehensive view.</li>
                         </ul>
+                        <p class="mt-3"><small>See <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/advanced_mlops.md" target="_blank" rel="noopener noreferrer">Advanced MLOps Documentation</a> for design details and conceptual code examples.</small></p>
                     </div>
                 </div>
                 <div class="col-lg-6">
                     <div class="card p-4">
-                        <h3 class="h4 mb-3">CI/CD Pipeline</h3>
+                        <h3 class="h4 mb-3">CI/CD Pipeline (Basic CI Implemented)</h3>
                         <ul>
-                            <li><strong>Triggers:</strong> Code merges, new data availability, scheduled retraining (weekly)</li>
-                            <li><strong>Automated Tests:</strong> Unit tests, data validation, model evaluation, fairness assessment</li>
-                            <li><strong>Deployment Strategy:</strong> Configurable strategies including <strong>Shadow Deployment</strong> (offline comparison) and <strong>Canary Releases</strong> (gradual rollout) managed via API gateway or service mesh for safe production updates.</li>
+                            <li><strong>CI Implementation:</strong> Current pipeline (<code>.github/workflows/main.yml</code>) includes linting, formatting checks, and basic testing.</li>
+                            <li><strong>CD Design:</strong> Conceptual design includes triggers (code merges, schedule), automated testing, and deployment strategies (Shadow/Canary), but these are not yet implemented in the CI/CD workflow.</li>
                         </ul>
                         <div class="code-block mt-2">
 <pre>name: Model CI/CD Pipeline
@@ -1264,12 +1264,12 @@ jobs:
         <div class="container">
             <div class="row">
                 <div class="col-lg-8 mx-auto text-center mb-5">
-                    <h2 class="display-5 fw-bold">Project Visualizations</h2>
+                    <h2 class="display-5 fw-bold">Project Visualisations</h2>
                     <p class="lead text-muted">Key insights from our analysis and modeling</p>
                 </div>
             </div>
 
-            <!-- Imbalance Analysis Visualizations -->
+            <!-- Imbalance Analysis Visualisations -->
             <div class="row mb-5">
                 <div class="col-lg-12">
                     <div class="card mb-4">
@@ -1324,13 +1324,13 @@ jobs:
                 </div>
             </div>
 
-            <!-- Time-Aware LSTM Visualizations -->
+            <!-- Time-Aware LSTM Visualisations -->
             <div class="row">
                 <div class="col-lg-12">
                     <div class="card">
                         <div class="card-body">
                             <h3 class="h4 mb-4">Time-Aware LSTM Model Performance</h3>
-                            <p class="mb-4">Our advanced temporal modeling approach uses a Time-Aware LSTM architecture to capture the sequential nature of clinical data. These visualizations demonstrate the model's performance and training characteristics:</p>
+                            <p class="mb-4">Our advanced temporal modelling approach uses a Time-Aware LSTM architecture to capture the sequential nature of clinical data. These visualisations demonstrate the model's performance and training characteristics:</p>
 
                             <div class="row align-items-center">
                                 <div class="col-lg-6" data-aos="fade-right" data-aos-delay="100">
@@ -1423,7 +1423,7 @@ jobs:
             <div class="row">
                 <div class="col-lg-8 mx-auto text-center mb-5">
                     <h2 class="display-5 fw-bold">Future Directions & Enhancements</h2>
-                    <p class="lead text-muted">Leveraging the 2025 AI Landscape</p>
+                    <p class="lead text-muted">Harnessing the 2025 AI Landscape</p>
                 </div>
             </div>
             <div class="row">
