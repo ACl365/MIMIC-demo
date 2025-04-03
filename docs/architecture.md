@@ -73,11 +73,11 @@ graph TD
     Dashboard --> Monitor
 
     %% Styling
-    classDef sourceNode fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef processNode fill:#bbf,stroke:#33f,stroke-width:2px;
-    classDef featureNode fill:#bfb,stroke:#3f3,stroke-width:2px;
-    classDef modelNode fill:#fbb,stroke:#f33,stroke-width:2px;
-    classDef deployNode fill:#ffb,stroke:#ff3,stroke-width:2px;
+    classDef sourceNode fill:#f9f,stroke:#333,stroke-width:2px,color:#333;
+    classDef processNode fill:#bbf,stroke:#33f,stroke-width:2px,color:#333;
+    classDef featureNode fill:#bfb,stroke:#3f3,stroke-width:2px,color:#333;
+    classDef modelNode fill:#fbb,stroke:#f33,stroke-width:2px,color:#333;
+    classDef deployNode fill:#ffb,stroke:#ff3,stroke-width:2px,color:#333;
 
     class MIMIC3,MIMIC4 sourceNode;
     class Ingest,Clean,Process processNode;
