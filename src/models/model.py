@@ -979,7 +979,9 @@ class ReadmissionModel(BaseModel):
                 self.logger.error(f"Error during data reshaping: {e}", exc_info=True)
                 # Return empty dataframes if reshaping fails critically
                 return pd.DataFrame(), (
-                    None if for_prediction else (pd.DataFrame(), pd.Series(dtype=float))
+                    None
+                    if for_prediction
+                    else pd.Series(dtype=int)  # Return empty Series on error
                 )
         else:
             self.logger.info(
@@ -988,30 +990,68 @@ class ReadmissionModel(BaseModel):
 
         # --- Feature Selection ---
         # Define features based on config (or use all available if not specified)
-        numeric_features = self.model_config.get("numeric_features", [])
-        categorical_features = self.model_config.get("categorical_features", [])
-        all_expected_features = numeric_features + categorical_features
+        # Attempt to load features from config
+        conf_numeric_features = self.model_config.get("numeric_features", [])
+        conf_categorical_features = self.model_config.get("categorical_features", [])
+        all_expected_features = conf_numeric_features + conf_categorical_features
 
-        # Select only the features present in the data AND expected by the config
-        available_features = [
-            col for col in all_expected_features if col in data.columns
-        ]
-        missing_expected = set(all_expected_features) - set(available_features)
-        if missing_expected:
-            self.logger.warning(
-                f"Expected features missing from data after reshaping: {missing_expected}. They will be excluded."
+        if all_expected_features:
+            # Features ARE specified in config: Select available ones among expected
+            self.logger.info("Using features specified in configuration.")
+            available_features = [
+                col for col in all_expected_features if col in data.columns
+            ]
+            missing_expected = set(all_expected_features) - set(available_features)
+            if missing_expected:
+                self.logger.warning(
+                    f"Expected features missing from data after reshaping: {missing_expected}. They will be excluded."
+                )
+        else:
+            # Features ARE NOT specified in config: Dynamically identify
+            self.logger.info(
+                "No features specified in config. Dynamically identifying numeric and categorical features."
+            )
+            potential_features = data.columns.tolist()
+            # Exclude IDs and target
+            exclude_cols = id_cols + (
+                [self.target] if self.target and self.target in data.columns else []
+            )
+            available_features = [
+                col for col in potential_features if col not in exclude_cols
+            ]
+            # Further refine based on dtype (optional but good practice)
+            numeric_features = (
+                data[available_features]
+                .select_dtypes(include=np.number)
+                .columns.tolist()
+            )
+            categorical_features = (
+                data[available_features]
+                .select_dtypes(include="object")
+                .columns.tolist()
+            )  # Include 'category' as well if needed
+            available_features = (
+                numeric_features + categorical_features
+            )  # Use only identified numeric/cat features
+            self.logger.info(
+                f"Dynamically identified {len(numeric_features)} numeric and {len(categorical_features)} categorical features."
             )
 
         if not available_features:
             self.logger.error(
-                "No configured features found in the data after reshaping."
+                "No features found in the data (either configured or dynamically identified)."
             )
+            # Return empty DataFrame and empty Series if no features are found
             return pd.DataFrame(), (
-                None if for_prediction else (pd.DataFrame(), pd.Series(dtype=float))
+                None
+                if for_prediction
+                else pd.Series(dtype=int)  # Return empty Series on error
             )
 
-        # FIX: Ensure only existing columns are selected
-        X = data[available_features].copy()
+        # Select the final set of features
+        self.logger.info(f"Using {len(available_features)} features for the model.")
+        self.feature_names = available_features  # Store feature names used
+        X = data[self.feature_names].copy()
 
         # --- Handle Target Variable ---
         y = None
@@ -1665,7 +1705,7 @@ class TemporalReadmissionModel(BaseModel):
 
     def preprocess(
         self, data: pd.DataFrame, for_prediction: bool = False
-    ) -> Tuple[Dict[str, Any], Optional[pd.Series[int]]]:
+    ) -> Tuple[Dict[str, Any], Optional[pd.Series]]:
         """
         Preprocess data for the temporal model.
 
@@ -1905,7 +1945,7 @@ class TemporalReadmissionModel(BaseModel):
         self,
         # Widen X_train type hint to match BaseModel for LSP compliance
         X_train: pd.DataFrame | Dict[Any, Any],
-        y_train: pd.Series[int],
+        y_train: pd.Series,
         algorithm: Optional[str] = None,  # Algorithm ignored for now
     ) -> nn.Module:
         """
@@ -2099,7 +2139,7 @@ class TemporalReadmissionModel(BaseModel):
 
     # Widen X_test type hint to match BaseModel for LSP compliance
     def evaluate(
-        self, X_test: pd.DataFrame | Dict[Any, Any], y_test: pd.Series[int]
+        self, X_test: pd.DataFrame | Dict[Any, Any], y_test: pd.Series
     ) -> Dict[str, float]:
         """
         Evaluate the trained Temporal LSTM model on the test set.
@@ -2184,7 +2224,7 @@ class TemporalReadmissionModel(BaseModel):
         return metrics
 
     # Specify dtype for returned ndarray (probabilities are floats)
-    def predict(self, data: pd.DataFrame) -> np.ndarray[Any, np.dtype[np.float_]]:
+    def predict(self, data: pd.DataFrame) -> np.ndarray[Any, np.dtype[np.float64]]:
         """
         Make predictions with the trained Temporal LSTM model.
 
@@ -2409,7 +2449,7 @@ class TemporalReadmissionModel(BaseModel):
         X: pd.DataFrame,
         background_data: Optional[pd.DataFrame] = None,
         # Specify ndarray dtype for SHAP values (floats)
-    ) -> Tuple[Optional[np.ndarray[Any, np.dtype[np.float_]]], Optional[Any]]:
+    ) -> Tuple[Optional[np.ndarray[Any, np.dtype[np.float64]]], Optional[Any]]:
         """SHAP values for LSTMs require specialized explainers (e.g., DeepExplainer) and are not implemented here."""
         self.logger.warning(
             "SHAP value calculation for TimeAwarePatientLSTM requires specific handling and is not implemented by default."

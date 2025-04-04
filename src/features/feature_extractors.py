@@ -261,14 +261,14 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
 
         # Combine features using an outer merge to keep all stays
         # Start with a base of all stays to ensure none are dropped if one feature type is missing
-        base_ids = icustays[["subject_id", "hadm_id", "stay_id"]].drop_duplicates()
+        base_ids = icustays[["subject_id", "hadm_id", "icustay_id"]].drop_duplicates()
 
         features = base_ids
         if not lab_features.empty:
             features = pd.merge(
                 features,
                 lab_features,
-                on=["subject_id", "hadm_id", "stay_id"],
+                on=["subject_id", "hadm_id", "icustay_id"],
                 how="left",
             )
         else:
@@ -280,7 +280,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
             features = pd.merge(
                 features,
                 vital_features,
-                on=["subject_id", "hadm_id", "stay_id"],
+                on=["subject_id", "hadm_id", "icustay_id"],
                 how="left",
             )
         else:
@@ -318,7 +318,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
         self.logger.info("Extracting laboratory features")
         # Start with ICU stay IDs as the base
         lab_features_final = (
-            icustays[["subject_id", "hadm_id", "stay_id"]].copy().drop_duplicates()
+            icustays[["subject_id", "hadm_id", "icustay_id"]].copy().drop_duplicates()
         )
 
         # Load MIMIC-III lab data
@@ -349,7 +349,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
                     lab_features_final = pd.merge(
                         lab_features_final,
                         processed_labs,
-                        on=["subject_id", "hadm_id", "stay_id"],
+                        on=["subject_id", "hadm_id", "icustay_id"],
                         how="left",
                     )
                 else:
@@ -492,7 +492,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
             # Merge with ICU stays to get stay_id
             labs = pd.merge(
                 labs,
-                icustays[["subject_id", "hadm_id", "stay_id", "intime", "outtime"]],
+                icustays[["subject_id", "hadm_id", "icustay_id", "intime", "outtime"]],
                 on=["subject_id", "hadm_id"],
                 how="inner",  # Inner merge ensures only labs associated with an ICU stay are kept
             )
@@ -522,7 +522,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
             )
             # Drop rows where valuenum could not be converted
             window_labs = window_labs.dropna(
-                subset=["valuenum", "standardized_label", "stay_id"]
+                subset=["valuenum", "standardized_label", "icustay_id"]
             )  # Ensure key columns are not NaN
 
             # If there are no labs after filtering, return an empty dataframe with ID columns
@@ -530,11 +530,11 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
                 self.logger.warning(
                     "No valid lab data found within the specified window after cleaning."
                 )
-                return pd.DataFrame(columns=["subject_id", "hadm_id", "stay_id"])
+                return pd.DataFrame(columns=["subject_id", "hadm_id", "icustay_id"])
 
             # Sort by time for sequence creation
             window_labs = window_labs.sort_values(
-                ["subject_id", "hadm_id", "stay_id", "charttime"]
+                ["subject_id", "hadm_id", "icustay_id", "charttime"]
             )
 
             # Create (time, value) tuples
@@ -546,7 +546,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
             self.logger.info("Aggregating lab data into sequences (time, value)")
             lab_sequences = (
                 window_labs.groupby(
-                    ["subject_id", "hadm_id", "stay_id", "standardized_label"]
+                    ["subject_id", "hadm_id", "icustay_id", "standardized_label"]
                 )["time_value_tuple"]
                 .apply(list)  # Use list aggregation
                 .reset_index()
@@ -554,7 +554,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
 
             # Pivot the table to have one row per stay_id and columns for each lab sequence
             lab_features = lab_sequences.pivot_table(
-                index=["subject_id", "hadm_id", "stay_id"],
+                index=["subject_id", "hadm_id", "icustay_id"],
                 columns="standardized_label",
                 values="time_value_tuple",
                 aggfunc=list,  # Use list aggregation
@@ -574,7 +574,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
         except Exception as e:
             self.logger.error(f"Error processing lab data: {e}", exc_info=True)
             # Return empty dataframe with expected ID columns in case of error
-            return pd.DataFrame(columns=["subject_id", "hadm_id", "stay_id"])
+            return pd.DataFrame(columns=["subject_id", "hadm_id", "icustay_id"])
 
     def _extract_vital_features(
         self, admissions: pd.DataFrame, icustays: pd.DataFrame
@@ -592,7 +592,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
         """
         self.logger.info("Extracting vital sign features")
         vital_features_final = (
-            icustays[["subject_id", "hadm_id", "stay_id"]].copy().drop_duplicates()
+            icustays[["subject_id", "hadm_id", "icustay_id"]].copy().drop_duplicates()
         )  # Start with unique ICU stays
 
         # Load MIMIC-III vital sign data
@@ -775,7 +775,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
             # Ensure stay_id is present after merge
             chart_events = pd.merge(
                 chart_events,
-                icustays[["subject_id", "hadm_id", "stay_id", "intime", "outtime"]],
+                icustays[["subject_id", "hadm_id", "intime", "outtime"]],
                 on=["subject_id", "hadm_id"],
                 how="inner",  # Inner merge keeps only events associated with these stays
             )
@@ -805,7 +805,7 @@ class ClinicalFeatureExtractor(BaseFeatureExtractor):
             )
             # Drop rows where valuenum could not be converted or essential IDs/labels are missing
             window_vitals = window_vitals.dropna(
-                subset=["valuenum", "standardized_label", "stay_id"]
+                subset=["valuenum", "standardized_label", "icustay_id"]
             )
 
             # Convert Temperature F to C if present

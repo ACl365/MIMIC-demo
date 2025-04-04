@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+</head>
     <meta charset="UTF-8">
+    <h1>MIMIC Readmission Predictor | Enterprise-Scale MLOps Pipeline</h1>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MIMIC Readmission Predictor | Enterprise-Scale MLOps Pipeline</title>
     <!-- Core libraries -->
@@ -32,11 +34,11 @@
                     mode: 'lines+markers',
                     name: 'SMOTE',
                     line: {
-                        color: '#10b981',
+                        colour: '#10b981',
                         width: 3
                     },
                     marker: {
-                        color: '#10b981',
+                        colour: '#10b981',
                         size: 8
                     }
                 };
@@ -48,12 +50,12 @@
                     mode: 'lines+markers',
                     name: 'Baseline',
                     line: {
-                        color: '#6c757d',
+                        colour: '#6c757d',
                         width: 3,
                         dash: 'dot'
                     },
                     marker: {
-                        color: '#6c757d',
+                        colour: '#6c757d',
                         size: 8
                     }
                 };
@@ -109,7 +111,7 @@
                             },
                         }
                     },
-                    colors: ['#3b82f6', '#4f86f7', '#639df8', '#77b3f9', '#8bc9fa', '#9fdffa', '#b3f5fb', '#c7fbfb', '#dbfffc', '#efffff'],
+                    colours: ['#3b82f6', '#4f86f7', '#639df8', '#77b3f9', '#8bc9fa', '#9fdffa', '#b3f5fb', '#c7fbfb', '#dbfffc', '#efffff'],
                     dataLabels: {
                         enabled: true,
                         formatter: function (val) {
@@ -118,17 +120,17 @@
                         offsetX: 30,
                         style: {
                             fontSize: '12px',
-                            colors: ['#304758']
+                            colours: ['#304758']
                         }
                     },
                     stroke: {
                         width: 1,
-                        colors: ['#fff']
+                        colours: ['#fff']
                     },
                     grid: {
                         borderColor: '#e2e8f0',
                         row: {
-                            colors: ['#f8fafc', 'transparent'],
+                            colours: ['#f8fafc', 'transparent'],
                             opacity: 0.5
                         },
                     },
@@ -163,18 +165,18 @@
         /* --- Variables & Base --- */
         :root {
             /* Modern color palette */
-            --primary-color: #0f172a; /* Deep blue-gray for depth */
-            --secondary-color: #3b82f6; /* Vibrant blue for accents */
-            --accent-color: #f43f5e; /* Vibrant pink-red for emphasis */
-            --success-color: #10b981; /* Emerald green for success states */
-            --warning-color: #f59e0b; /* Amber for warnings */
-            --info-color: #06b6d4; /* Cyan for info */
+            --primary-colour: #0f172a; /* Deep blue-gray for depth */
+            --secondary-colour: #3b82f6; /* Vibrant blue for accents */
+            --accent-colour: #f43f5e; /* Vibrant pink-red for emphasis */
+            --success-colour: #10b981; /* Emerald green for success states */
+            --warning-colour: #f59e0b; /* Amber for warnings */
+            --info-colour: #06b6d4; /* Cyan for info */
 
             /* Neutral tones */
             --light-gray: #f8fafc;
             --medium-gray: #e2e8f0;
             --dark-gray: #475569;
-            --text-color: #1e293b;
+            --text-colour: #1e293b;
 
             /* Gradients */
             --primary-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -218,7 +220,7 @@
 
         body {
             font-family: var(--body-font);
-            color: var(--text-color);
+            colour: var(--text-colour);
             background-color: var(--light-gray);
             line-height: 1.7;
             padding-top: 70px;
@@ -235,7 +237,7 @@
             font-family: var(--heading-font);
             font-weight: 700;
             margin-bottom: var(--space-md);
-            color: var(--primary-color);
+            colour: var(--primary-colour);
             letter-spacing: -0.025em;
             line-height: 1.2;
         }
@@ -265,12 +267,12 @@
         }
 
         a {
-            color: var(--secondary-color);
+            colour: var(--secondary-colour);
             text-decoration: none;
             transition: color 0.2s ease-in-out;
         }
         a:hover {
-            color: darken(var(--secondary-color), 10%);
+            colour: darken(var(--secondary-colour), 10%);
             text-decoration: underline;
         }
         /* Style image links for better affordance */
@@ -289,11 +291,11 @@
         }
 
         .text-muted {
-            color: #6c757d !important; /* Bootstrap default muted */
+            colour: #6c757d !important; /* Bootstrap default muted */
         }
 
         .text-accent {
-            color: var(--accent-color) !important;
+            colour: var(--accent-colour) !important;
         }
 
         /* --- Layout & Spacing --- */
@@ -313,24 +315,24 @@
         .navbar-brand {
             font-weight: 700;
             font-size: 1.4rem;
-            color: var(--primary-color) !important;
+            colour: var(--primary-colour) !important;
         }
         .navbar-brand .text-accent {
             font-weight: 700;
         }
         .nav-link {
             font-weight: 500;
-            color: var(--dark-gray) !important;
+            colour: var(--dark-gray) !important;
             padding: 0.5rem 1rem !important;
         }
         .nav-link:hover, .nav-link.active {
-            color: var(--secondary-color) !important;
+            colour: var(--secondary-colour) !important;
         }
 
         /* --- Hero Section --- */
         .hero {
             background: var(--primary-gradient);
-            color: white;
+            colour: white;
             padding: 9rem 0 7rem;
             position: relative;
             overflow: hidden;
@@ -354,12 +356,12 @@
         }
 
         .hero h1 {
-            color: white;
+            colour: white;
             margin-bottom: 1.5rem;
         }
 
         .hero .lead {
-            color: rgba(255, 255, 255, 0.9);
+            colour: rgba(255, 255, 255, 0.9);
             font-size: 1.25rem;
             margin-bottom: 2rem;
         }
@@ -374,7 +376,7 @@
 
         .hero .btn-light {
             background-color: white;
-            color: var(--primary-color);
+            colour: var(--primary-colour);
             border: none;
         }
 
@@ -386,7 +388,7 @@
 
         .hero .btn-outline-light {
             border: 2px solid rgba(255, 255, 255, 0.7);
-            color: white;
+            colour: white;
         }
 
         .hero .btn-outline-light:hover {
@@ -449,7 +451,7 @@
 
         .card-title {
             margin-bottom: 1.25rem;
-            color: var(--primary-color);
+            colour: var(--primary-colour);
             font-weight: 700;
         }
 
@@ -465,7 +467,7 @@
 
         .card li::before {
             content: "•";
-            color: var(--secondary-color);
+            colour: var(--secondary-colour);
             font-weight: bold;
             display: inline-block;
             width: 1em;
@@ -485,7 +487,7 @@
 
         .card small {
             font-size: 0.85rem;
-            color: var(--dark-gray);
+            colour: var(--dark-gray);
             display: block;
             margin-top: 1rem;
         }
@@ -503,7 +505,7 @@
             margin-right: auto;
             margin-bottom: 1.5rem;
             font-size: 1.75rem; /* Slightly smaller icon size */
-            color: var(--secondary-color);
+            colour: var(--secondary-colour);
         }
 
         /* --- Backgrounds --- */
@@ -523,7 +525,7 @@
             border-radius: 15px; /* Pill shape */
             font-weight: 500;
             font-size: 0.85rem;
-            color: var(--dark-gray);
+            colour: var(--dark-gray);
         }
         .badge { /* Ensure badges have good contrast */
              padding: 0.4em 0.7em;
@@ -561,7 +563,7 @@
             width: 0.8rem; /* Smaller dot */
             height: 0.8rem;
             border-radius: 50%;
-            background: var(--secondary-color);
+            background: var(--secondary-colour);
             border: 2px solid #ffffff; /* White border for contrast */
             z-index: 1;
         }
@@ -586,7 +588,7 @@
             font-size: 0.9rem; /* Slightly smaller code font */
             overflow-x: auto;
             white-space: pre; /* Preserve whitespace */
-            color: #333; /* Darker text for contrast */
+            colour: #333; /* Darker text for contrast */
         }
         .code-block pre {
             margin: 0;
@@ -604,7 +606,7 @@
             border-radius: 4px;
         }
         .callout strong {
-            color: var(--primary-color);
+            colour: var(--primary-colour);
         }
 
         /* --- Tables --- */
@@ -634,12 +636,12 @@
         /* --- Footer --- */
         footer {
             background-color: var(--primary-color);
-            color: rgba(255, 255, 255, 0.8);
+            colour: rgba(255, 255, 255, 0.8);
             padding: 4rem 0;
             margin-top: 4rem;
         }
         footer a {
-            color: white;
+            colour: white;
             text-decoration: underline;
         }
 
@@ -653,7 +655,7 @@
              flex-shrink: 0; /* Prevent arrow from shrinking */
         }
         footer a:hover {
-            color: var(--medium-gray);
+            colour: var(--medium-gray);
         }
         footer p {
             margin-bottom: 0.5rem;
@@ -767,7 +769,7 @@
                     <p class="lead mb-4">A strategic Proof-of-Concept demonstrating a robust, scalable MLOps pipeline for readmission prediction using MIMIC-III Demo data. Focuses on <strong>methodological rigor, end-to-end best practices, and production readiness</strong> for reliable healthcare AI.</p>
                     <div class="d-flex gap-3">
                         <a href="https://github.com/ACl365/MIMIC_demo" class="btn btn-light btn-lg"><i class="fab fa-github me-2"></i>View on GitHub</a>
-                        <a href="#overview" class="btn btn-outline-light btn-lg">Learn More</a>
+                        <a href="#project-overview" class="btn btn-outline-light btn-lg">Learn More</a>
                     </div>
                 </div>
                 <!-- Architecture visual removed; details provided in the Architecture section and linked documentation. -->
@@ -776,7 +778,7 @@
     </section>
 
     <!-- Project Overview Section -->
-    <section class="section bg-white">
+    <section class="section bg-white" id="project-overview">
         <div class="container">
             <div class="row">
                 <div class="col-lg-8 mx-auto text-center mb-5">

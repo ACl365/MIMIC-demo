@@ -2,14 +2,16 @@ import os
 import sys
 import time  # Added for latency
 from collections import deque  # Added for feature stats
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 
 import numpy as np
 import pandas as pd
 import shap
 import uvicorn
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, validator
 
 # Add src directory to Python path BEFORE importing project modules
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -243,14 +245,107 @@ async def health_check() -> dict:
 
 
 # --- Prediction Endpoint ---
-class PatientFeatures(BaseModel):
-    # Placeholder for potential future input validation using Pydantic
-    pass
+# --- Pydantic Models for Input Validation ---
+# Define the expected input structure based on features sent by the current dashboard
+# Note: Ideally, the API might expect raw features and handle encoding internally.
+# This model reflects the current dashboard's output payload.
+class PatientFeaturesInput(BaseModel):
+    age: Optional[float] = Field(None, ge=0, le=130)  # Added reasonable bounds
+
+    # Gender (Example - add all from dashboard)
+    gender_f: Optional[int] = Field(0, ge=0, le=1)
+    gender_m: Optional[int] = Field(0, ge=0, le=1)
+    gender_nan: Optional[int] = Field(0, ge=0, le=1)
+
+    # Admission Type (Example - add all from dashboard)
+    admission_type_ambulatory_observation: Optional[int] = Field(
+        0, alias="admission_type_ambulatory observation", ge=0, le=1
+    )
+    admission_type_direct_emer: Optional[int] = Field(
+        0, alias="admission_type_direct emer.", ge=0, le=1
+    )
+    admission_type_direct_observation: Optional[int] = Field(
+        0, alias="admission_type_direct observation", ge=0, le=1
+    )
+    admission_type_elective: Optional[int] = Field(0, ge=0, le=1)
+    admission_type_emergency: Optional[int] = Field(0, ge=0, le=1)
+    admission_type_eu_observation: Optional[int] = Field(
+        0, alias="admission_type_eu observation", ge=0, le=1
+    )
+    admission_type_ew_emer: Optional[int] = Field(
+        0, alias="admission_type_ew emer.", ge=0, le=1
+    )
+    admission_type_observation_admit: Optional[int] = Field(
+        0, alias="admission_type_observation admit", ge=0, le=1
+    )
+    admission_type_surgical_same_day_admission: Optional[int] = Field(
+        0, alias="admission_type_surgical same day admission", ge=0, le=1
+    )
+    admission_type_urgent: Optional[int] = Field(0, ge=0, le=1)
+    admission_type_nan: Optional[int] = Field(0, ge=0, le=1)
+
+    # Insurance (Example - add all from dashboard)
+    insurance_government: Optional[int] = Field(0, ge=0, le=1)
+    insurance_medicaid: Optional[int] = Field(0, ge=0, le=1)
+    insurance_medicare: Optional[int] = Field(0, ge=0, le=1)
+    insurance_other: Optional[int] = Field(0, ge=0, le=1)
+    insurance_private: Optional[int] = Field(0, ge=0, le=1)
+    insurance_nan: Optional[int] = Field(0, ge=0, le=1)
+
+    # Marital Status (Example - add all from dashboard)
+    marital_status_divorced: Optional[int] = Field(0, ge=0, le=1)
+    marital_status_married: Optional[int] = Field(0, ge=0, le=1)
+    marital_status_separated: Optional[int] = Field(0, ge=0, le=1)
+    marital_status_single: Optional[int] = Field(0, ge=0, le=1)
+    marital_status_unknown_default: Optional[int] = Field(
+        0, alias="marital_status_unknown (default)", ge=0, le=1
+    )
+    marital_status_widowed: Optional[int] = Field(0, ge=0, le=1)
+    marital_status_nan: Optional[int] = Field(0, ge=0, le=1)
+
+    # Diagnosis Features (Example - add all from dashboard)
+    diagnosis_circulatory: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_digestive: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_endocrine: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_e_external_causes: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_genitourinary: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_injury: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_mental: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_musculoskeletal: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_neoplasms: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_nervous: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_other: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_respiratory: Optional[int] = Field(0, ge=0, le=1)
+    diagnosis_v_supplementary: Optional[int] = Field(0, ge=0, le=1)
+
+    # Legacy/Other Features
+    feature_0: Optional[int] = Field(
+        0, alias="0", ge=0, le=1
+    )  # Handle the '0' feature key
+
+    # Allow other fields potentially sent but not explicitly defined
+    # class Config:
+    #     extra = "allow"
+    # Alternative: Use root validator if strict validation needed on known fields
+
+
+# --- Custom Exception Handler for Validation Errors ---
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    logger.error(f"Input validation error: {exc.errors()}")
+    # Provide a more user-friendly error message
+    return JSONResponse(
+        status_code=422,
+        content={"detail": "Input validation failed", "errors": exc.errors()},
+    )
+
+
+# --- Prediction Endpoint ---
 
 
 @app.post("/predict", summary="Predict 30-Day Readmission Risk")
 async def predict_readmission(
-    patient_data: Dict[str, Any],
+    patient_data: PatientFeaturesInput,  # Use Pydantic model for validation
     explain: bool = False,  # Optional query parameter for explanation
 ) -> dict:
     """
@@ -288,17 +383,15 @@ async def predict_readmission(
         request_stats["total_requests"] += 1
         logger.info(f"Received prediction request #{request_stats['total_requests']}")
 
-        # --- Basic Input Validation & Feature Logging ---
-        if not isinstance(patient_data, dict):
-            raise HTTPException(
-                status_code=400, detail="Invalid input: Expected JSON object."
-            )
+        # --- Input Validation & Feature Logging ---
+        # Pydantic performs validation based on PatientFeaturesInput model now.
+        # Log summary stats for key features (e.g., age)
 
         # Log summary stats for key features (e.g., age)
         try:
-            age = patient_data.get("age")  # Assuming 'age' is a key feature
-            if isinstance(age, (int, float)):
-                request_stats["recent_ages"].append(float(age))
+            # Access validated age directly from the Pydantic model
+            if patient_data.age is not None:
+                request_stats["recent_ages"].append(patient_data.age)
 
             # Log stats periodically (e.g., every 10 requests)
             if request_stats["total_requests"] % 10 == 0:
@@ -314,7 +407,11 @@ async def predict_readmission(
             logger.warning(f"Could not log feature stats: {stats_err}")
 
         # --- Data Preparation ---
-        input_df_raw = pd.DataFrame([patient_data])
+        # Convert Pydantic model to dict, excluding unset fields to handle optionals
+        input_dict = patient_data.dict(
+            exclude_unset=True, by_alias=True
+        )  # Use by_alias for fields like '0'
+        input_df_raw = pd.DataFrame([input_dict])
 
         # Prepare features based on model type
         scaled_features = None
@@ -390,7 +487,7 @@ async def predict_readmission(
                 #    These could be stored alongside the model artifact or in a config file.
                 #    baseline_age_mean = config.get("monitoring", {}).get("baseline_age_mean", 55.0)
                 #    baseline_age_std = config.get("monitoring", {}).get("baseline_age_std", 15.0)
-
+                #
                 # 2. Compare current input distribution (using `request_stats['recent_ages']`)
                 #    to the baseline using statistical tests (e.g., KS test, Z-score).
                 #    if request_stats["recent_ages"]: # Check if deque is not empty
@@ -398,8 +495,14 @@ async def predict_readmission(
                 #        if abs(current_mean_age - baseline_age_mean) > 3 * baseline_age_std: # Example Z-score check
                 #            logger.warning(f"Potential data drift detected in 'age'. Mean: {current_mean_age:.2f}, Baseline Mean: {baseline_age_mean:.2f}")
                 #            # Trigger alert or further investigation
-
+                #
                 # 3. For categorical features, compare frequency distributions.
+                #
+                # 4. Production Monitoring: For robust monitoring, integrate with tools like
+                #    Prometheus/Grafana, Datadog, or specialized ML monitoring platforms
+                #    (e.g., WhyLabs, Arize, Fiddler) to track data drift, model drift,
+                #    and performance metrics over time. The current in-memory stats are
+                #    suitable for demos but not scalable for production.
 
         except Exception as predict_e:
             logger.error(f"Prediction error: {predict_e}", exc_info=True)
@@ -434,6 +537,10 @@ async def predict_readmission(
                         shap_background_data, columns=expected_features
                     )
 
+                    # SHAP Performance Note: KernelExplainer is model-agnostic but can be slow.
+                    # If the underlying model is tree-based (like XGBoost, LightGBM, CatBoost, RandomForest),
+                    # consider using shap.TreeExplainer(model_instance.model, background_df)
+                    # for significantly faster computation.
                     explainer = shap.KernelExplainer(
                         predict_fn_shap, background_df.values  # Use .values
                     )

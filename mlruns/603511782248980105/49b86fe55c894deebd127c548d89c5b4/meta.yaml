@@ -1,0 +1,15 @@
+artifact_uri: file:///C:/Users/alex5/Documents/Projects/MIMIC_demo/mlruns/603511782248980105/49b86fe55c894deebd127c548d89c5b4/artifacts
+end_time: 1743763539493
+entry_point_name: ''
+experiment_id: '603511782248980105'
+lifecycle_stage: active
+run_id: 49b86fe55c894deebd127c548d89c5b4
+run_name: Imbalance_Comparison_6a4f534
+run_uuid: 49b86fe55c894deebd127c548d89c5b4
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1743763530488
+status: 3
+tags: []
+user_id: alex5

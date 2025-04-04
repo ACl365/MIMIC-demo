@@ -7,7 +7,7 @@ data into structured formats suitable for feature extraction and modeling.
 
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 from tqdm import tqdm
@@ -714,7 +714,15 @@ class ICUStayProcessor(BaseProcessor):
 
         # Select relevant columns
         icustays = icustays[
-            ["subject_id", "hadm_id", "stay_id", "intime", "outtime", "los", "source"]
+            [
+                "subject_id",
+                "hadm_id",
+                "icustay_id",
+                "intime",
+                "outtime",
+                "los",
+                "source",
+            ]
         ]
         return icustays
 

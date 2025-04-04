@@ -97,7 +97,7 @@ def load_data() -> pd.DataFrame:
     return data
 
 
-def preprocess_data(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series[int]]:
+def preprocess_data(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     """
     Preprocess the loaded data using the ReadmissionModel's preprocess method.
 
@@ -207,7 +207,7 @@ def create_imbalance_pipelines(random_state: int = 42) -> Dict[str, ImbPipeline]
 
 def evaluate_pipelines(
     X: pd.DataFrame,
-    y: pd.Series[int],
+    y: pd.Series,
     pipelines: Dict[str, ImbPipeline],
     cv_folds: int = 5,
     random_state: int = 42,
@@ -610,7 +610,7 @@ def plot_confusion_matrix(
 def plot_calibration_curve(
     # Specify dtype for ndarray (labels are int, probabilities are float)
     y_true: np.ndarray[Any, np.dtype[np.int_]],
-    y_prob: np.ndarray[Any, np.dtype[np.float_]],
+    y_prob: np.ndarray[Any, np.dtype[np.float64]],
     technique_name: str,
     save_path: Optional[str] = None,
 ) -> None:
@@ -723,7 +723,7 @@ def plot_feature_coefficients(
 
 def plot_feature_distribution(
     X: pd.DataFrame,
-    y: pd.Series[int],
+    y: pd.Series,
     feature_name: str,
     technique_name: str,
     save_path: Optional[str] = None,
@@ -747,7 +747,7 @@ def plot_feature_distribution(
 
     plt.figure(figsize=(10, 6))
     sns.histplot(
-        data=X, x=feature_name, hue=y, kde=True, stat="density", common_norm=False
+        data=X, x=feature_name, hue=y, kde=False, stat="density", common_norm=False
     )
     plt.title(f"Distribution of {feature_name} by Class - {technique_name}")
     plt.tight_layout()
@@ -765,7 +765,7 @@ def plot_feature_distribution(
 
 def analyze_imbalance_techniques(
     X: pd.DataFrame,
-    y: pd.Series[int],
+    y: pd.Series,
     config: Dict[str, Any],
     selected_technique: str = "Class Weights",
     feature_to_plot: Optional[str] = "age",  # Example feature
@@ -925,7 +925,12 @@ def analyze_imbalance_techniques(
         )
         try:
             with open(selected_pipeline_path, "wb") as f:
-                pickle.dump(selected_pipeline, f)
+                # Save pipeline and feature names together
+                pipeline_data = {
+                    "pipeline": selected_pipeline,
+                    "features": X.columns.tolist(),  # Assuming X is the scaled feature DataFrame
+                }
+                pickle.dump(pipeline_data, f)
             logger.info(
                 f"Saved selected pipeline '{selected_technique}' to {selected_pipeline_path}"
             )
