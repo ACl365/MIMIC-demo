@@ -11,10 +11,10 @@ Hospital readmissions represent a significant financial burden on healthcare sys
 | Metric                          | Current State  | Illustrative Scenario w/ Model    | Potential Metric Impact  |
 |---------------------------------|----------------|-----------------------------------|--------------------------|
 | 30-day readmission rate         | 15.3%          | Illustrative: ~13.1%              | Illustrative: ~2.2% reduction |
-| Average cost per readmission    | $11,200        | $11,200                           | -                        |
+| Average cost per readmission    | $11,200 (approx. £8,960) | $11,200 (approx. £8,960)          | -                        |
 | Annual admissions (medium hosp) | 20,000         | 20,000                            | -                        |
 | Annual readmissions             | 3,060          | Illustrative: ~2,612              | Illustrative: ~448 fewer |
-| Annual readmission cost         | $34.3 million  | Illustrative: ~$29.3 million      | Illustrative: ~$5.0 million |
+| Annual readmission cost         | $34.3 million (approx. £27.44 million) | Illustrative: ~$29.3 million (approx. £23.44 million) | Illustrative: ~$5.0 million (approx. £4.0 million) |
 
 **Illustrative Calculation & Assumptions (Using Demo Data Performance):**
 - **CRITICAL LIMITATION:** The following calculation uses performance metrics (Recall = 0.732) achieved by the SMOTE-enhanced model on the highly limited MIMIC-III *demo* dataset (~200 patients). **These results are NOT representative of real-world performance and CANNOT be used for reliable financial projections.** The purpose of this calculation is solely to *illustrate the methodology* for estimating potential impact *if* similar performance were achieved on a full dataset and combined with effective interventions.
@@ -23,11 +23,11 @@ Hospital readmissions represent a significant financial burden on healthcare sys
     - Readmissions Identified by Demo Model (Recall 0.732): 3,060 * 0.732 ≈ 2,240
     - *Assumed* Intervention Success Rate: 20% (Hypothetical - needs clinical validation)
     - Illustrative Prevented Readmissions: 2,240 * 20% ≈ 448
-    - Illustrative Annual Savings: 448 * $11,200/readmission ≈ $5.0 million
+    - Illustrative Annual Savings: 448 * $11,200 (approx. £8,960)/readmission ≈ $5.0 million (approx. £4.0 million)
 - **Other Assumptions:**
-    - Average readmission cost ($11,200) based on published literature.
-    - Implementation costs estimated at $500k (Year 1), $200k (annual thereafter).
-- **Illustrative ROI (Year 1):** ~$5.0M / $0.5M ≈ 10:1 (Highly speculative, depends entirely on achieving reliable performance and intervention success).
+    - Average readmission cost ($11,200 (approx. £8,960)) based on published literature.
+    - Implementation costs estimated at $500k (approx. £400k) (Year 1), $200k (approx. £160k) (annual thereafter).
+- **Illustrative ROI (Year 1):** ~$5.0M (approx. £4.0M) / $0.5M (approx. £0.4M) ≈ 10:1 (Highly speculative, depends entirely on achieving reliable performance and intervention success).
 - **Conclusion:** While the demo model shows promise in identifying high-risk patients (significantly better than baseline), **substantial further validation on a full dataset is required** before any reliable impact quantification can be made. The primary value demonstrated at this stage is the potential of the modeling approach and the framework for future evaluation.
 
 ### Patient Outcome Improvements
@@ -158,7 +158,7 @@ Different stakeholders require different communication approaches about the read
 - Focus on: ROI, resource optimisation, quality metrics, regulatory compliance
 - Format: Executive summaries, financial projections, benchmark comparisons
 - Key metrics: Cost savings, readmission rate reduction, staff efficiency, length of stay
-- Example: "Implementation reduces readmissions by 15%, saving $5.2M annually with a 10:1 ROI while improving CMS quality metrics."
+- Example: "Implementation reduces readmissions by 15%, saving $5.2M (approx. £4.16M) annually with a 10:1 ROI while improving CMS quality metrics."
 
 #### For Patients
 - Focus on: Personalised care, improved outcomes, privacy protections
@@ -180,7 +180,7 @@ The MIMIC Readmission Prediction System leverages advanced analytics to identify
 
 **Key Benefits:**
 - Reduces 30-day readmissions by an estimated 15% (460 fewer readmissions annually)
-- Generates $5.2M in annual savings for a medium-sized hospital (20,000 admissions/year)
+- Generates $5.2M (approx. £4.16M) in annual savings for a medium-sized hospital (20,000 admissions/year)
 - Improves resource allocation by focusing interventions on highest-risk patients
 - Enhances quality metrics for value-based care programs and CMS reporting
 - Provides actionable insights for quality improvement initiatives
@@ -192,8 +192,8 @@ The MIMIC Readmission Prediction System leverages advanced analytics to identify
 - Phase 4 (ongoing): Continuous monitoring and improvement
 
 **Investment Required:**
-- Initial implementation: $500,000
-- Annual maintenance: $200,000
+- Initial implementation: $500,000 (approx. £400,000)
+- Annual maintenance: $200,000 (approx. £160,000)
 - Projected 3-year ROI: 25:1
 
 **Next Steps:**

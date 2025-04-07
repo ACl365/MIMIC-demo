@@ -891,8 +891,8 @@
                                         </tr>
                                         <tr>
                                             <td>Estimated Cost</td>
-                                            <td>$50/month</td>
-                                            <td>$2,500/month (cloud infrastructure)</td>
+                                            <td>$50 (approx. £40)/month</td>
+                                            <td>$2,500 (approx. £2,000)/month (cloud infrastructure)</td>
                                             <td>50x</td>
                                         </tr>
                                     </tbody>
@@ -1133,7 +1133,7 @@
                         </div>
                         <div class="feature-content">
                             <p>Connecting model performance to potential real-world value.</p>
-                            <p><strong>Estimated Impact:</strong> Based on the SMOTE-enhanced model's performance (AUC-PR ~0.35 on this subset) and reported average readmission costs, scaling this pipeline could potentially identify an additional 5-10% of at-risk patients compared to baseline rules. This could translate to potential annual savings on the order of £100k-£200k per 10,000 relevant patient discharges in a large hospital system by enabling targeted interventions (highly dependent on actual performance and intervention effectiveness).</p>
+                            <p><strong>Estimated Impact:</strong> Based on the SMOTE-enhanced model's performance (AUC-PR ~0.35 on this subset) and reported average readmission costs, scaling this pipeline could potentially identify an additional 5-10% of at-risk patients compared to baseline rules. This could translate to potential annual savings on the order of approx. $125k-$250k (£100k-£200k) per 10,000 relevant patient discharges in a large hospital system by enabling targeted interventions (highly dependent on actual performance and intervention effectiveness).</p>
                             <p><strong>Workflow Integration:</strong> The prediction score output by the API could be integrated into the EHR system as a clinical decision support alert for care coordinators or physicians during discharge planning, flagging high-risk patients for review.</p>
                             <p class="mt-2"><small>See the <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/strategic_impact.md" target="_blank" rel="noopener noreferrer">Strategic Impact Documentation</a> for a detailed breakdown of potential value and integration points, including calculations based on demo data performance (with appropriate caveats).</small></p>
                         </div>
@@ -1154,22 +1154,7 @@
 
                             <!-- Compact Grid for Plots -->
                             <div class="row g-2 mt-2">
-                                <!-- Fairness Plot -->
-                                <div class="col-6">
-                                    <h5 class="h6">Fairness</h5>
-                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/fairness_recall_gender.png">
-                                        <img src="assets/fairness_recall_gender.png" alt="Fairness Analysis - Recall by Gender" class="img-fluid rounded shadow mb-1">
-                                    </a>
-                                    <p><small>Recall by Gender.</small></p>
-                                </div>
-                                <!-- Confusion Matrix -->
-                                <div class="col-6">
-                                    <h5 class="h6">Confusion Matrix</h5>
-                                    <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/confusion_matrix_class_weights.png">
-                                        <img src="assets/confusion_matrix_class_weights.png" alt="Confusion Matrix - Class Weights Model" class="img-fluid rounded shadow mb-1">
-                                    </a>
-                                    <p><small>True/False Pos/Neg.</small></p>
-                                </div>
+                                <!-- Fairness and Confusion Matrix removed -->
                                 <!-- Calibration Curve -->
                                 <div class="col-6">
                                     <h5 class="h6">Calibration</h5>
@@ -1186,16 +1171,16 @@
                                     </a>
                                     <p><small>Top feature influences.</small></p>
                                 </div>
-                                <!-- SHAP Summary Plot (Full Width Below) -->
+                                <!-- SHAP Summary Plot (Removed as shown elsewhere) -->
                                 <div class="col-12 mt-2">
                                     <h5 class="h6">SHAP Summary</h5>
                                     <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/shap_summary_plot.png">
                                         <img src="assets/shap_summary_plot.png" alt="SHAP Summary Plot" class="img-fluid rounded shadow mb-1">
                                     </a>
-                                    <p><small>Individual feature impact.</small></p>
+                                    <p><small>SHAP analysis provides insights into individual feature impacts on predictions.</small></p>
                                 </div>
                             </div>
-                            <p class="mt-auto pt-2"><small>Fairness/SHAP in <code><a href="https://github.com/ACl365/MIMIC_demo/tree/main/src/visualization/" target="_blank" rel="noopener noreferrer">src/visualization/</a></code>. See <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/ethical_considerations.md" target="_blank" rel="noopener noreferrer">Ethical Considerations</a>.</small></p>
+                            <p class="mt-auto pt-2"><small>Fairness/SHAP in <code><a href="https://github.com/ACl365/MIMIC_demo/tree/main/src/visualisation/" target="_blank" rel="noopener noreferrer">src/visualisation/</a></code>. See <a href="https://github.com/ACl365/MIMIC_demo/blob/main/docs/ethical_considerations.md" target="_blank" rel="noopener noreferrer">Ethical Considerations</a>.</small></p>
                         </div>
                     </div>
                 </div>
@@ -1378,15 +1363,9 @@ jobs:
                                  <div class="card border-0 shadow-sm mb-3">
                                      <div class="card-body">
                                          <p><strong>Evaluation:</strong> We evaluated fairness using metrics like <strong>Equalized Odds Difference</strong> across the 'gender' attribute to quantify disparities in True Positive Rates between subgroups.</p>
-                                         <p><strong>Initial Finding:</strong> The baseline LightGBM model showed a difference of 0.08 in True Positive Rates between male and female subgroups.</p>
+                                         <p><strong>Initial Finding:</strong> Fairness analysis using recall across gender was performed on the demo dataset. The results indicated potential disparities (common with limited data), highlighting the need for careful evaluation and potential mitigation strategies when scaling to the full dataset. (Specific plot omitted due to demo data limitations).</p>
                                          <p><strong>Mitigation/Monitoring:</strong> While specific mitigation techniques (like re-weighing or adversarial debiasing) are planned for the full-scale implementation, this metric is actively monitored in our evaluation pipeline. Current focus is on ensuring transparency around existing disparities.</p>
-                                         <div class="text-center">
-                                             <!-- Replaced placeholder with actual fairness plot -->
-                                             <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/fairness_recall_gender.png">
-                                                 <img src="assets/fairness_recall_gender.png" alt="Fairness Analysis - Recall by Gender" class="img-fluid rounded shadow" style="max-height: 180px;">
-                                             </a>
-                                             <p><small>Example: Recall difference across gender (Click to enlarge)</small></p>
-                                         </div>
+                                         <!-- Fairness plot removed due to statistical limitations of demo data -->
                                      </div>
                                  </div>
                              </div>
@@ -1398,10 +1377,8 @@ jobs:
                                          <p><strong>Value Proposition:</strong> SHAP values allow clinicians to understand the key drivers (e.g., specific lab results, length of stay) contributing to an individual patient's risk score, fostering trust and enabling more informed decision-making.</p>
                                          <div class="text-center">
                                              <!-- Replaced placeholder with actual SHAP plot -->
-                                             <a href="#" class="image-popup-link" data-bs-toggle="modal" data-bs-target="#imageModal" data-img-src="assets/shap_summary_plot.png">
-                                                 <img src="assets/shap_summary_plot.png" alt="SHAP Summary Plot Example" class="img-fluid rounded shadow" style="max-height: 180px;">
-                                             </a>
-                                             <p class="mt-2"><small>Example: SHAP summary plot showing global feature importance (Click to enlarge)</small></p>
+                                             <!-- SHAP plot removed as it is shown in the Visualizations section -->
+                                             <p class="mt-2"><small>SHAP analysis provides feature importance insights (see Visualizations section).</small></p>
                                          </div>
                                      </div>
                                  </div>
@@ -1448,7 +1425,7 @@ jobs:
     <!-- Footer -->
     <footer class="text-center">
         <div class="container">
-            <p>&copy; 2025 MIMIC Readmission Predictor PoC. All Rights Reserved.</p>
+            <p>&copy; 2025 MIMIC Readmission Predictor PoC. Alexander Clarke. All Rights Reserved.</p>
             <p><a href="#">Back to top</a></p>
         </div>
     </footer>

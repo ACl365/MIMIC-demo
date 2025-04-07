@@ -22,7 +22,7 @@ This project serves as a **Strategic Proof-of-Concept (PoC)** demonstrating a ro
 **Please Note:** This project utilizes the MIMIC-III *Demo* dataset, a small subset of the full MIMIC-III database. Consequently, the statistical power and generalizability of the specific model results presented here are limited. The **primary objective of this PoC is *not* to achieve state-of-the-art predictive accuracy, but rather to showcase a comprehensive, end-to-end MLOps pipeline built with best practices for reliability, reproducibility, and scalability.**
 
 The focus is on demonstrating:
-*   **Software Engineering Rigor:** Clean, modular code (`src/`), comprehensive testing (`tests/`), configuration management (`configs/`), logging (`src/utils/logger.py`), and dependency management (`requirements.txt`).
+*   **Software Engineering Rigour:** Clean, modular code (`src/`), comprehensive testing (`tests/`), configuration management (`configs/`), logging (`src/utils/logger.py`), and dependency management (`requirements.txt`).
 *   **Advanced Data Handling:** Robust ETL, feature engineering for complex clinical data (`src/features/`), and strategies for handling imbalance (`src/models/imbalance_analysis.py`).
 *   **Modern AI Techniques:** Exploration and implementation of temporal models (LSTM PoC), interpretability methods (SHAP), and fairness analysis. Conceptual frameworks for causal inference and generative AI are outlined in [FUTURE_WORK.md](FUTURE_WORK.md).
 *   **End-to-End MLOps:** Automated CI/CD (GitHub Actions conceptual example), experiment tracking (MLflow conceptual integration), model monitoring principles, containerisation (Docker), and deployment patterns (API via FastAPI, Dashboard via Streamlit).
@@ -39,8 +39,8 @@ This section clarifies the current implementation status of different components
     *   **Supporting Scripts (Based on Structure):** The project structure includes scripts for:
         *   Core Data Pipeline (`src/data/`, `src/features/`)
         *   Imbalance Analysis & Basic Model Training (`src/models/imbalance_analysis.py`)
-        *   Interpretability Plot Generation (`src/visualization/generate_shap_plots.py`)
-        *   Fairness Plot Generation (`src/visualization/generate_fairness_plots.py`)
+        *   Interpretability Plot Generation (`src/visualisation/generate_shap_plots.py`)
+        *   Fairness Plot Generation (`src/visualisation/generate_fairness_plots.py`)
         *(Note: The internal functionality of these specific scripts was not reviewed in detail, but their presence indicates implementation).*
     *   **LSTM PoC (Notebook):** Initial Time-Aware LSTM proof-of-concept developed in a notebook (`notebooks/advanced_temporal_model_poc.ipynb`), demonstrating feasibility.
 
@@ -69,14 +69,14 @@ Investigated various techniques to address the significant class imbalance in re
 
 ### 2. Model Interpretability (SHAP)
 Utilised SHAP to understand feature contributions to model predictions for the 'Class Weights' Logistic Regression model.
-*(See `src/visualization/generate_shap_plots.py`)*
+*(See `src/visualisation/generate_shap_plots.py`)*
 
 ![SHAP Summary Plot](assets/shap_summary_plot.png)
 *SHAP summary plot (beeswarm) showing feature impact on individual predictions.*
 
 ### 3. Fairness Analysis
 Assessed model performance disparities across demographic groups (e.g., gender) using the recall metric.
-*(See `src/visualization/generate_fairness_plots.py`)*
+*(See `src/visualisation/generate_fairness_plots.py`)*
 
 ![Fairness Plot (Recall by Gender)](assets/fairness_recall_gender.png)
 *Comparison of recall scores for Female (f) and Male (m) groups.*
@@ -101,7 +101,7 @@ This project implements a robust MLOps pipeline encompassing:
 ## Ethical Considerations & Bias Mitigation
 
 A framework for responsible AI development is crucial:
-*   **Fairness Assessment:** Analysing model performance across sensitive attributes (e.g., gender, ethnicity) as demonstrated (`src/visualization/generate_fairness_plots.py`).
+*   **Fairness Assessment:** Analysing model performance across sensitive attributes (e.g., gender, ethnicity) as demonstrated (`src/visualisation/generate_fairness_plots.py`).
 *   **Transparency:** Using interpretability techniques like SHAP and Feature Importance (`assets/feature_coefficients_class_weights.png`).
 *   **Bias Mitigation:** Exploring pre-processing, in-processing, and post-processing techniques (future work).
 *   **Documentation:** Maintaining clear documentation on ethical considerations ([docs/ethical_considerations.md](docs/ethical_considerations.md)).
