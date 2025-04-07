@@ -15,7 +15,7 @@ This project serves as a **Strategic Proof-of-Concept (PoC)** demonstrating a ro
 2.  ICU mortality prediction
 3.  Length of stay estimation
 
-**Live Demo & Detailed Overview:** [index.html](index.html) (Open this file locally in a browser)
+**Live Demo & Detailed Overview:** (https://alexander-clarke.com/MIMIC-demo/)
 
 ## Project Goal: Demonstrating Production Readiness
 
