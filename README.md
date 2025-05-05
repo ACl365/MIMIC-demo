@@ -1,4 +1,4 @@
-# MIMIC Critical Care Readmission Prediction: An Enterprise-Scale MLOps PoC
+# MIMIC Critical Care Readmission Prediction: An Enterprise-Scale MLOps PoC 
 
 [![Status: PoC](https://img.shields.io/badge/status-Proof--of--Concept-orange)](https://en.wikipedia.org/wiki/Proof_of_concept)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/release/python-390/)
@@ -207,7 +207,7 @@ mimic-readmission-predictor/
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
 
 ## Acknowledgements
 
